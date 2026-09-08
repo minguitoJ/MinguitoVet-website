@@ -3,14 +3,12 @@ session_start();
 
 require_once __DIR__ . '/config/database.php';
 
-$loginType = (($_GET['type'] ?? $_POST['type'] ?? 'customer') === 'admin') ? 'admin' : 'customer';
-
-if ($loginType === 'admin' && isset($_SESSION['admin_id'])) {
+if (isset($_SESSION['admin_id'])) {
     header('Location: admin/dashboard.php');
     exit;
 }
 
-if ($loginType === 'customer' && isset($_SESSION['customer_id'])) {
+if (isset($_SESSION['customer_id'])) {
     header('Location: index.php');
     exit;
 }
@@ -19,63 +17,139 @@ $error = '';
 $registered = isset($_GET['registered']) && $_GET['registered'] === '1';
 $redirect = $_POST['redirect'] ?? ($_GET['redirect'] ?? '');
 
-$allowedRedirects = ['appointment.php', 'appointments.php', 'profile.php', 'index.php'];
+$allowedRedirects = [
+    'appointment.php',
+    'appointments.php',
+    'profile.php',
+    'index.php'
+];
 
 if (!in_array($redirect, $allowedRedirects, true)) {
     $redirect = 'index.php';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $identifier = trim($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
-    $loginType = (($_POST['type'] ?? 'customer') === 'admin') ? 'admin' : 'customer';
 
     if ($identifier === '' || $password === '') {
-        $error = $loginType === 'admin'
-            ? 'Please enter your username and password.'
-            : 'Please enter your email and password.';
-    } elseif ($loginType === 'customer' && !filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Please enter a valid email address.';
+
+        $error = 'Please enter your username/email and password.';
+
     } else {
+
         try {
-            if ($loginType === 'admin') {
-                $stmt = $pdo->prepare('SELECT id, username, password FROM admins WHERE username = :username LIMIT 1');
-                $stmt->execute([':username' => $identifier]);
-                $admin = $stmt->fetch();
 
-                if ($admin && password_verify($password, $admin['password'])) {
-                    session_regenerate_id(true);
-                    unset($_SESSION['customer_id'], $_SESSION['customer_name'], $_SESSION['customer_email'], $_SESSION['customer_contact']);
-                    $_SESSION['admin_id'] = (int) $admin['id'];
-                    $_SESSION['admin_username'] = $admin['username'];
-                    header('Location: admin/dashboard.php');
-                    exit;
-                }
+            /*
+             * ONE LOGIN:
+             * First check the admin account by username.
+             * If no valid admin is found, check the customer account by email.
+             */
+            $adminStmt = $pdo->prepare(
+                'SELECT id, username, password
+                 FROM admins
+                 WHERE username = :username
+                 LIMIT 1'
+            );
 
-                $error = 'Invalid username or password.';
-            } else {
-                $stmt = $pdo->prepare('SELECT id, full_name, email, contact_number, password FROM customers WHERE email = :email LIMIT 1');
-                $stmt->execute([':email' => $identifier]);
-                $customer = $stmt->fetch();
+            $adminStmt->execute([
+                ':username' => $identifier
+            ]);
 
-                if ($customer && password_verify($password, $customer['password'])) {
-                    session_regenerate_id(true);
-                    unset($_SESSION['admin_id'], $_SESSION['admin_username']);
-                    $_SESSION['customer_id'] = (int) $customer['id'];
-                    $_SESSION['customer_name'] = $customer['full_name'];
-                    $_SESSION['customer_email'] = $customer['email'];
-                    $_SESSION['customer_contact'] = $customer['contact_number'] ?? '';
-                    header('Location: ' . $redirect);
-                    exit;
-                }
+            $admin = $adminStmt->fetch();
 
-                $error = 'Invalid email or password.';
+            if (
+                $admin &&
+                password_verify($password, $admin['password'])
+            ) {
+
+                session_regenerate_id(true);
+
+                unset(
+                    $_SESSION['customer_id'],
+                    $_SESSION['customer_name'],
+                    $_SESSION['customer_email'],
+                    $_SESSION['customer_contact']
+                );
+
+                $_SESSION['admin_id'] =
+                    (int) $admin['id'];
+
+                $_SESSION['admin_username'] =
+                    $admin['username'];
+
+                header(
+                    'Location: admin/dashboard.php'
+                );
+
+                exit;
             }
+
+            /*
+             * Customer login uses email.
+             */
+            $customerStmt = $pdo->prepare(
+                'SELECT id, full_name, email, contact_number, password
+                 FROM customers
+                 WHERE email = :email
+                 LIMIT 1'
+            );
+
+            $customerStmt->execute([
+                ':email' => $identifier
+            ]);
+
+            $customer = $customerStmt->fetch();
+
+            if (
+                $customer &&
+                password_verify(
+                    $password,
+                    $customer['password']
+                )
+            ) {
+
+                session_regenerate_id(true);
+
+                unset(
+                    $_SESSION['admin_id'],
+                    $_SESSION['admin_username']
+                );
+
+                $_SESSION['customer_id'] =
+                    (int) $customer['id'];
+
+                $_SESSION['customer_name'] =
+                    $customer['full_name'];
+
+                $_SESSION['customer_email'] =
+                    $customer['email'];
+
+                $_SESSION['customer_contact'] =
+                    $customer['contact_number'] ?? '';
+
+                header(
+                    'Location: ' . $redirect
+                );
+
+                exit;
+            }
+
+            /*
+             * Use one generic error so the login page
+             * does not reveal whether an account exists.
+             */
+            $error = 'Invalid username/email or password.';
+
         } catch (PDOException $e) {
-            $error = 'Unable to log in right now. Please try again.';
+
+            $error =
+                'Unable to log in right now. Please try again.';
         }
     }
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -90,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title><?= $loginType === 'admin' ? 'Admin Login' : 'Customer Login' ?> | Minguito Veterinary Clinic</title>
+    <title>Login | Minguito Veterinary Clinic</title>
 
     <link rel="preconnect"
           href="https://fonts.googleapis.com">
@@ -497,11 +571,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-top: 7px;
         }
 
-        .login-switch { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:5px; margin:0 auto 24px; background:#f3eadc; border:1px solid rgba(181,122,47,.16); border-radius:14px; }
-        .login-tab { display:flex; align-items:center; justify-content:center; min-height:42px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:800; letter-spacing:.4px; text-decoration:none; transition:.25s ease; }
-        .login-tab:hover { color:var(--green); background:rgba(255,255,255,.7); }
-        .login-tab.active { color:var(--white); background:var(--green); box-shadow:0 7px 16px rgba(7,59,42,.13); }
-
         @media (max-width: 520px) {
 
             .auth-card {
@@ -532,71 +601,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <img class="brand-logo" src="assets/images/logo.png" alt="Minguito Veterinary Clinic">
 
-    <div class="login-switch">
-        <a class="login-tab <?= $loginType === 'customer' ? 'active' : '' ?>" href="login.php?type=customer<?= $redirect !== 'index.php' ? '&redirect=' . urlencode($redirect) : '' ?>">🐾 CUSTOMER</a>
-        <a class="login-tab <?= $loginType === 'admin' ? 'active' : '' ?>" href="login.php?type=admin">⚙ ADMIN</a>
-    </div>
-
-    <p class="eyebrow"><?= $loginType === 'admin' ? 'ADMIN PORTAL' : 'CUSTOMER PORTAL' ?></p>
+    <p class="eyebrow">SECURE ACCOUNT LOGIN</p>
 
     <h1>Welcome Back</h1>
 
     <p class="intro">
-        <?= $loginType === 'admin'
-            ? 'Log in to manage appointments, patients, and clinic records.'
-            : 'Log in to manage your profile and book veterinary appointments.' ?>
+        Log in to access your Minguito Veterinary Clinic account.
     </p>
 
-    <?php if ($registered && $loginType === 'customer'): ?>
-        <div class="message success">Account created successfully. You can now continue to the customer portal.</div>
+    <?php if ($registered): ?>
+        <div class="message success">
+            Account created successfully. You can now log in.
+        </div>
     <?php endif; ?>
 
     <?php if ($error !== ''): ?>
         <div class="message error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
     <?php endif; ?>
 
-    <form method="POST" action="login.php">
-        <input type="hidden" name="type" value="<?= htmlspecialchars($loginType, ENT_QUOTES, 'UTF-8') ?>">
-        <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect, ENT_QUOTES, 'UTF-8') ?>">
+    <form method="POST" action="login.php" autocomplete="off">
+
+        <input
+            type="hidden"
+            name="redirect"
+            value="<?= htmlspecialchars(
+                $redirect,
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>"
+        >
 
         <div class="form-group">
-            <label for="identifier"><?= $loginType === 'admin' ? 'Username' : 'Email Address' ?></label>
+            <label for="identifier">
+                Username or Email Address
+            </label>
+
             <input
-                type="<?= $loginType === 'admin' ? 'text' : 'email' ?>"
+                type="text"
                 id="identifier"
                 name="identifier"
-                value="<?= htmlspecialchars($_POST['identifier'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                placeholder="<?= $loginType === 'admin' ? 'Enter your username' : 'Enter your email address' ?>"
-                autocomplete="<?= $loginType === 'admin' ? 'username' : 'email' ?>"
+                value="<?= htmlspecialchars(
+                    $_POST['identifier'] ?? '',
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>"
+                placeholder="Enter your username or email"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
                 required
             >
         </div>
 
         <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password">
+                Password
+            </label>
+
             <div class="input-wrap">
-                <input class="password-input" type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
-                <button class="password-toggle" type="button" id="passwordToggle" aria-label="Show password">👁</button>
+
+                <input
+                    class="password-input"
+                    type="password"
+                    id="password"
+                    name="password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-bwignore="true"
+                    placeholder="Enter your password"
+                    autocomplete="new-password"
+                    spellcheck="false"
+                    required
+                >
+
+                <button
+                    class="password-toggle"
+                    type="button"
+                    id="passwordToggle"
+                    aria-label="Show password"
+                >
+                    👁
+                </button>
+
             </div>
         </div>
 
-        <button class="login-btn" type="submit">
-            <?= $loginType === 'admin' ? 'LOGIN AS ADMIN' : 'LOGIN TO YOUR ACCOUNT' ?>
+        <button
+            class="login-btn"
+            type="submit"
+        >
+            LOGIN TO YOUR ACCOUNT
         </button>
+
     </form>
 
     <div class="links">
-        <?php if ($loginType === 'customer'): ?>
-            <p>
-                Don't have an account?
-                <a href="register.php<?= $redirect !== 'index.php' ? '?redirect=' . urlencode($redirect) : '' ?>">Create one here</a>
-            </p>
-            <p><a href="login.php?type=admin">⚙ Admin Login</a></p>
-        <?php else: ?>
-            <p>Not an admin? <a href="login.php?type=customer">Customer Login</a></p>
-        <?php endif; ?>
 
-        <a class="home-link" href="index.php">← Back to Home</a>
+        <p>
+            Don't have an account?
+            <a href="register.php<?= $redirect !== 'index.php' ? '?redirect=' . urlencode($redirect) : '' ?>">
+                Create one here
+            </a>
+        </p>
+
+        <a class="home-link" href="index.php">
+            ← Back to Home
+        </a>
+
     </div>
 
 </main>

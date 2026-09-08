@@ -222,16 +222,12 @@ try {
     /* -----------------------------------------------------
        INSERT APPOINTMENT
 
-       Actual columns:
+       The database now has a UNIQUE constraint on:
 
-       customer_id
-       owner_name
-       pet_name
-       service
        appointment_date
        appointment_time
-       status
-       created_at
+
+       This enforces first-come-first-serve booking.
     ----------------------------------------------------- */
 
     $sql = "
@@ -280,7 +276,34 @@ try {
 } catch (PDOException $e) {
 
     /* -----------------------------------------------------
-       DATABASE ERROR
+       DUPLICATE APPOINTMENT SLOT
+
+       MySQL error 1062 means a UNIQUE constraint was
+       violated.
+
+       This happens when another customer has already
+       booked the exact same date and time.
+    ----------------------------------------------------- */
+
+    if (
+        isset($e->errorInfo[1]) &&
+        (int) $e->errorInfo[1] === 1062
+    ) {
+
+        error_log(
+            "Minguito duplicate appointment slot: "
+            . $appointmentDate
+            . " "
+            . $appointmentTime
+        );
+
+        header("Location: ../appointment.php?error=slot_taken");
+        exit;
+    }
+
+
+    /* -----------------------------------------------------
+       OTHER DATABASE ERROR
 
        Keep the actual error in the server log instead of
        displaying database information to the customer.

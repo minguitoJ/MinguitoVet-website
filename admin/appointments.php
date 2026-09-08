@@ -38,16 +38,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         in_array($newStatus, $allowedStatuses, true)
     ) {
 
-        $stmt = $pdo->prepare("
-            UPDATE appointments
-            SET status = :status
+        /*
+         * Completed appointments are permanently locked.
+         * They cannot be changed again after completion.
+         */
+        $currentStmt = $pdo->prepare("
+            SELECT status
+            FROM appointments
             WHERE id = :id
+            LIMIT 1
         ");
 
-        $stmt->execute([
-            ':status' => $newStatus,
+        $currentStmt->execute([
             ':id' => $appointmentId
         ]);
+
+        $currentStatus = $currentStmt->fetchColumn();
+
+        if ($currentStatus !== 'Completed') {
+
+            /*
+             * An appointment can only become Completed
+             * after its payment has been marked Paid.
+             */
+            $canComplete = true;
+
+            if ($newStatus === 'Completed') {
+
+                $paymentStmt = $pdo->prepare("
+                    SELECT payment_status
+                    FROM payments
+                    WHERE appointment_id = :appointment_id
+                    ORDER BY id DESC
+                    LIMIT 1
+                ");
+
+                $paymentStmt->execute([
+                    ':appointment_id' => $appointmentId
+                ]);
+
+                $paymentStatus = $paymentStmt->fetchColumn();
+
+                if ($paymentStatus !== 'Paid') {
+                    $canComplete = false;
+                }
+            }
+
+            if ($canComplete) {
+
+                $stmt = $pdo->prepare("
+                    UPDATE appointments
+                    SET status = :status
+                    WHERE id = :id
+                    AND status <> 'Completed'
+                ");
+
+                $stmt->execute([
+                    ':status' => $newStatus,
+                    ':id' => $appointmentId
+                ]);
+            } else {
+
+                /*
+                 * Preserve filters and show a payment-required message.
+                 */
+                $query = [
+                    'error' => 'payment_required'
+                ];
+
+                if ($search !== '') {
+                    $query['search'] = $search;
+                }
+
+                if ($statusFilter !== '') {
+                    $query['status'] = $statusFilter;
+                }
+
+                if ($dateFilter !== '') {
+                    $query['date'] = $dateFilter;
+                }
+
+                header(
+                    'Location: appointments.php?' .
+                    http_build_query($query)
+                );
+                exit;
+            }
+        }
     }
 
     // Preserve filters after updating
@@ -92,11 +169,21 @@ $sql = "
         a.created_at,
         c.full_name AS customer_name,
         c.email AS customer_email,
-        c.contact_number AS customer_contact
+        c.contact_number AS customer_contact,
+        p.id AS payment_id,
+        COALESCE(p.payment_status, 'Unpaid') AS payment_status,
+        COALESCE(p.payment_method, '') AS payment_method
     FROM appointments a
 
     LEFT JOIN customers c
         ON a.customer_id = c.id
+
+    LEFT JOIN payments p
+        ON p.id = (
+            SELECT MAX(p2.id)
+            FROM payments p2
+            WHERE p2.appointment_id = a.id
+        )
 
     WHERE 1=1
 ";
@@ -732,7 +819,7 @@ $completedAppointments = (int) $pdo
 
             border-collapse: collapse;
 
-            min-width: 1000px;
+            min-width: 1140px;
         }
 
 
@@ -878,6 +965,91 @@ $completedAppointments = (int) $pdo
 
         .status-update:hover {
             background: var(--gold);
+        }
+
+
+        /* =====================================
+           ALERT
+        ===================================== */
+
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 22px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .alert-warning {
+            color: #79520f;
+            background: #fff5dc;
+            border: 1px solid #ead09b;
+        }
+
+        .alert-warning strong {
+            color: #6c4707;
+            font-weight: 800;
+        }
+
+
+        /* =====================================
+           ACTIONS
+        ===================================== */
+
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        .payment-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 11px;
+            border-radius: 8px;
+            background: var(--gold);
+            color: white;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .2px;
+            transition: .2s ease;
+        }
+
+        .payment-action:hover {
+            background: var(--green);
+        }
+
+        .payment-paid {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 34px;
+            padding: 0 10px;
+            border-radius: 8px;
+            background: #e9f5ed;
+            color: var(--success);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .payment-waiting {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .locked-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--success);
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
         }
 
 
@@ -1054,6 +1226,19 @@ $completedAppointments = (int) $pdo
             </p>
 
         </section>
+
+
+        <?php if (($_GET['error'] ?? '') === 'payment_required'): ?>
+
+            <div class="alert alert-warning">
+                <strong>Payment Required</strong>
+                <span>
+                    This appointment cannot be marked as Completed
+                    until its payment has been recorded as Paid.
+                </span>
+            </div>
+
+        <?php endif; ?>
 
 
         <!-- =================================
@@ -1306,6 +1491,10 @@ $completedAppointments = (int) $pdo
                                     Status
                                 </th>
 
+                                <th>
+                                    Payment
+                                </th>
+
                             </tr>
 
                         </thead>
@@ -1455,82 +1644,161 @@ $completedAppointments = (int) $pdo
 
                                     <td>
 
-                                        <form
-                                            method="POST"
-                                            class="status-form"
-                                        >
+                                        <?php if ($appointment['status'] === 'Completed'): ?>
 
-                                            <input
-                                                type="hidden"
-                                                name="appointment_id"
-                                                value="<?= (int)
+                                            <div class="locked-status">
+                                                🔒 Completed
+                                            </div>
+
+                                        <?php else: ?>
+
+                                            <form
+                                                method="POST"
+                                                class="status-form"
+                                            >
+
+                                                <input
+                                                    type="hidden"
+                                                    name="appointment_id"
+                                                    value="<?= (int)
+                                                        $appointment['id'] ?>"
+                                                >
+
+
+                                                <select
+                                                    name="status"
+                                                    class="status-select"
+                                                >
+
+                                                    <option
+                                                        value="Pending"
+                                                        <?= $appointment[
+                                                            'status'
+                                                        ] === 'Pending'
+                                                            ? 'selected'
+                                                            : '' ?>
+                                                    >
+                                                        Pending
+                                                    </option>
+
+
+                                                    <option
+                                                        value="Approved"
+                                                        <?= $appointment[
+                                                            'status'
+                                                        ] === 'Approved'
+                                                            ? 'selected'
+                                                            : '' ?>
+                                                    >
+                                                        Approved
+                                                    </option>
+
+
+                                                    <option
+                                                        value="Completed"
+                                                        <?= $appointment[
+                                                            'status'
+                                                        ] === 'Completed'
+                                                            ? 'selected'
+                                                            : '' ?>
+                                                        <?= $appointment[
+                                                            'payment_status'
+                                                        ] !== 'Paid'
+                                                            ? 'disabled'
+                                                            : '' ?>
+                                                    >
+                                                        Completed
+                                                    </option>
+
+
+                                                    <option
+                                                        value="Cancelled"
+                                                        <?= $appointment[
+                                                            'status'
+                                                        ] === 'Cancelled'
+                                                            ? 'selected'
+                                                            : '' ?>
+                                                    >
+                                                        Cancelled
+                                                    </option>
+
+                                                </select>
+
+
+                                                <button
+                                                    type="submit"
+                                                    class="status-update"
+                                                >
+                                                    Update
+                                                </button>
+
+                                            </form>
+
+                                        <?php endif; ?>
+
+                                    </td>
+
+
+                                    <!-- PAYMENT -->
+
+                                    <td class="action-cell">
+
+                                        <?php if (
+                                            $appointment['status'] === 'Approved' &&
+                                            $appointment['payment_status'] !== 'Paid'
+                                        ): ?>
+
+                                            <a
+                                                href="payment.php?appointment_id=<?= (int)
                                                     $appointment['id'] ?>"
+                                                class="payment-action"
                                             >
+                                                <?php if (
+                                                    ($appointment['payment_method'] ?? '') === 'Cash'
+                                                    && ($appointment['payment_status'] ?? '') === 'Pending'
+                                                ): ?>
+                                                    Review Payment
+                                                <?php elseif (
+                                                    ($appointment['payment_method'] ?? '') === 'GCash'
+                                                    && ($appointment['payment_status'] ?? '') === 'Pending'
+                                                ): ?>
+                                                    Review Payment
+                                                <?php else: ?>
+                                                    Prepare Payment
+                                                <?php endif; ?>
+                                            </a>
 
+                                        <?php elseif (
+                                            $appointment['payment_status'] === 'Paid'
+                                        ): ?>
 
-                                            <select
-                                                name="status"
-                                                class="status-select"
-                                            >
+                                            <span class="payment-paid">
+                                                ✓ Paid
+                                            </span>
 
-                                                <option
-                                                    value="Pending"
-                                                    <?= $appointment[
-                                                        'status'
-                                                    ] === 'Pending'
-                                                        ? 'selected'
-                                                        : '' ?>
-                                                >
-                                                    Pending
-                                                </option>
+                                        <?php elseif (
+                                            $appointment['status'] === 'Pending'
+                                        ): ?>
 
+                                            <span class="payment-waiting">
+                                                Awaiting approval
+                                            </span>
 
-                                                <option
-                                                    value="Approved"
-                                                    <?= $appointment[
-                                                        'status'
-                                                    ] === 'Approved'
-                                                        ? 'selected'
-                                                        : '' ?>
-                                                >
-                                                    Approved
-                                                </option>
+                                        <?php elseif (
+                                            $appointment['status'] === 'Completed'
+                                        ): ?>
 
+                                            <span class="payment-paid">
+                                                ✓ Paid
+                                            </span>
 
-                                                <option
-                                                    value="Completed"
-                                                    <?= $appointment[
-                                                        'status'
-                                                    ] === 'Completed'
-                                                        ? 'selected'
-                                                        : '' ?>
-                                                >
-                                                    Completed
-                                                </option>
+                                        <?php else: ?>
 
+                                            <span class="payment-waiting">
+                                                —
+                                            </span>
 
-                                                <option
-                                                    value="Cancelled"
-                                                    <?= $appointment[
-                                                        'status'
-                                                    ] === 'Cancelled'
-                                                        ? 'selected'
-                                                        : '' ?>
-                                                >
-                                                    Cancelled
-                                                </option>
-
-                                            </select>
-
-
-                                            <button
-                                                type="submit"
-                                                class="status-update"
-                                            >
-                                                Update
-                                            </button>
-
-                                        </form>
+                                        <?php endif; ?>
 
                                     </td>
 

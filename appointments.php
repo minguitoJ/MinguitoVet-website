@@ -18,17 +18,28 @@ try {
 
     $stmt = $pdo->prepare(
         'SELECT
-            id,
-            owner_name,
-            pet_name,
-            service,
-            appointment_date,
-            appointment_time,
-            status,
-            created_at
-         FROM appointments
-         WHERE customer_id = :customer_id
-         ORDER BY appointment_date DESC, appointment_time DESC, id DESC'
+            a.id,
+            a.owner_name,
+            a.pet_name,
+            a.service,
+            a.appointment_date,
+            a.appointment_time,
+            a.status,
+            a.created_at,
+            p.id AS payment_id,
+            p.amount AS payment_amount,
+            p.payment_method,
+            p.reference_number,
+            p.payment_status
+         FROM appointments a
+         LEFT JOIN payments p
+            ON p.id = (
+                SELECT MAX(p2.id)
+                FROM payments p2
+                WHERE p2.appointment_id = a.id
+            )
+         WHERE a.customer_id = :customer_id
+         ORDER BY a.appointment_date DESC, a.appointment_time DESC, a.id DESC'
     );
 
     $stmt->execute([
@@ -377,6 +388,136 @@ function formatTimeValue(string $time): string
     line-height: 1.7;
 }
 
+.payment-notice {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.payment-notice.success {
+    background: #e8f6ef;
+    border: 1px solid #c8dfd0;
+    color: #14633f;
+}
+
+.payment-area {
+    margin-top: 17px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(7, 59, 42, .10);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.payment-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 35px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.payment-status.required {
+    background: #f5e5c9;
+    color: #9b641e;
+}
+
+.payment-status.pending {
+    background: #fff4dc;
+    color: #8a641d;
+}
+
+.payment-status.paid {
+    background: #e8f6ef;
+    color: #14633f;
+}
+
+.payment-status.cancelled {
+    background: #fff1ee;
+    color: #a13d32;
+}
+
+.payment-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    text-decoration: none;
+    background: #073b2a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    transition: .22s ease;
+}
+
+.payment-button:hover {
+    background: #b57a2f;
+    transform: translateY(-1px);
+}
+
+.payment-info {
+    width: 100%;
+    margin-top: 2px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.payment-info-box {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fbf7ef;
+    border: 1px solid #eadfce;
+}
+
+.payment-info-box span {
+    display: block;
+    margin-bottom: 3px;
+    color: #89958f;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
+.payment-info-box strong {
+    display: block;
+    overflow: hidden;
+    color: #214f43;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+    .payment-area {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .payment-button {
+        width: 100%;
+    }
+
+    .payment-info {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 800px) {
 
     .customer-appointments-page {
@@ -471,6 +612,15 @@ function formatTimeValue(string $time): string
                     ENT_QUOTES,
                     'UTF-8'
                 ) ?>
+            </div>
+
+        <?php endif; ?>
+
+        <?php if (($_GET['payment'] ?? '') === 'submitted'): ?>
+
+            <div class="payment-notice success">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Payment submitted successfully. Please wait while the clinic verifies your payment.</span>
             </div>
 
         <?php endif; ?>
@@ -608,6 +758,109 @@ function formatTimeValue(string $time): string
                                 </strong>
 
                             </div>
+
+                        </div>
+
+                        <?php
+                            $paymentStatus = trim($appointment['payment_status'] ?? '');
+                            $appointmentStatus = strtolower($status);
+                        ?>
+
+                        <div class="payment-area">
+
+                            <?php if (
+                                $appointmentStatus === 'approved' &&
+                                (
+                                    $paymentStatus === '' ||
+                                    (
+                                        $paymentStatus === 'Pending' &&
+                                        empty(trim($appointment['reference_number'] ?? ''))
+                                    )
+                                )
+                            ): ?>
+
+                                <span class="payment-status required">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    Payment Required
+                                </span>
+
+                                <a
+                                    href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
+                                    class="payment-button"
+                                >
+                                    <i class="fa-solid fa-credit-card"></i>
+                                    Pay Appointment
+                                </a>
+
+                            <?php elseif ($paymentStatus === 'Pending'): ?>
+
+                                <span class="payment-status pending">
+                                    <i class="fa-solid fa-clock"></i>
+                                    Pending Verification
+                                </span>
+
+                                <div class="payment-info">
+                                    <div class="payment-info-box">
+                                        <span>Amount</span>
+                                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
+                                    </div>
+                                    <div class="payment-info-box">
+                                        <span>Method</span>
+                                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
+                                    </div>
+                                    <div class="payment-info-box">
+                                        <span>Reference</span>
+                                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
+                                    </div>
+                                </div>
+
+                            <?php elseif ($paymentStatus === 'Paid'): ?>
+
+                                <span class="payment-status paid">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    Payment Paid
+                                </span>
+
+                                <div class="payment-info">
+                                    <div class="payment-info-box">
+                                        <span>Amount</span>
+                                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
+                                    </div>
+                                    <div class="payment-info-box">
+                                        <span>Method</span>
+                                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
+                                    </div>
+                                    <div class="payment-info-box">
+                                        <span>Reference</span>
+                                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
+                                    </div>
+                                </div>
+
+                            <?php elseif ($paymentStatus === 'Cancelled'): ?>
+
+                                <span class="payment-status cancelled">
+                                    <i class="fa-solid fa-circle-xmark"></i>
+                                    Payment Rejected
+                                </span>
+
+                                <?php if ($appointmentStatus === 'approved'): ?>
+                                    <a
+                                        href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
+                                        class="payment-button"
+                                    >
+                                        <i class="fa-solid fa-rotate-right"></i>
+                                        Submit Payment Again
+                                    </a>
+                                <?php endif; ?>
+
+                            <?php elseif ($appointmentStatus === 'completed'): ?>
+
+                                <span class="payment-status paid">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    Appointment Completed
+                                </span>
+
+                            <?php endif; ?>
 
                         </div>
 

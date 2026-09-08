@@ -10,6 +10,7 @@ $navItems = [
     ['page' => 'calendar.php',     'label' => 'Calendar',      'icon' => 'fa-solid fa-calendar-days'],
     ['page' => 'patients.php',     'label' => 'Patients',      'icon' => 'fa-solid fa-paw'],
     ['page' => 'services.php',     'label' => 'Services',      'icon' => 'fa-solid fa-stethoscope'],
+    ['page' => 'medicines.php',    'label' => 'Medicines',     'icon' => 'fa-solid fa-pills'],
     ['page' => 'messages.php',     'label' => 'Messages',      'icon' => 'fa-solid fa-envelope'],
     ['page' => 'settings.php',     'label' => 'Settings',      'icon' => 'fa-solid fa-gear'],
 ];
@@ -51,8 +52,16 @@ $navItems = [
     <!-- ADMIN PROFILE -->
     <div class="sidebar-profile">
 
-        <div class="sidebar-avatar">
-            <i class="fa-solid fa-user-shield"></i>
+        <div class="sidebar-avatar" aria-label="Administrator">
+            <svg
+                class="admin-profile-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+            >
+                <circle cx="12" cy="8" r="3.2"></circle>
+                <path d="M5.5 20c.55-3.35 3.05-5.2 6.5-5.2s5.95 1.85 6.5 5.2"></path>
+            </svg>
         </div>
 
         <div class="sidebar-profile-text">
@@ -148,6 +157,25 @@ $navItems = [
     </div>
 
 </aside>
+
+<style>
+    /* Administrator profile icon */
+    .sidebar-avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .admin-profile-icon {
+        width: 27px;
+        height: 27px;
+        fill: none;
+        stroke: #ffffff;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+</style>
 
 
 <!-- MOBILE OVERLAY -->

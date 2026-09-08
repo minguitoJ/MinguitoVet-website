@@ -806,7 +806,10 @@ include 'includes/navbar.php';
                             'Please choose a valid appointment time.',
 
                         'database' =>
-                            'We could not save your appointment right now. Please try again.'
+                            'We could not save your appointment right now. Please try again.',
+
+                        'slot_taken' =>
+                            'Sorry, this appointment date and time has already been booked. Please choose another date or time.'
 
                     ];
 

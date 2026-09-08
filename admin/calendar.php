@@ -186,15 +186,17 @@ function formatAppointmentTime(?string $time): string
             margin: 0;
             color: var(--green-dark);
             font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(34px, 3vw, 48px);
+            font-size: clamp(40px, 4vw, 52px);
+            font-weight: 700;
             line-height: 1.05;
-            letter-spacing: -0.6px;
+            letter-spacing: -0.8px;
         }
 
         .page-title-wrap p {
             margin: 12px 0 0;
             color: var(--muted);
             font-size: 16px;
+            font-weight: 400;
             line-height: 1.5;
         }
 
@@ -258,7 +260,7 @@ function formatAppointmentTime(?string $time): string
             color: var(--green-dark);
             font: inherit;
             font-size: 13px;
-            font-weight: 800;
+            font-weight: 600;
             text-decoration: none;
             cursor: pointer;
             transition: .2s ease;
@@ -310,7 +312,7 @@ function formatAppointmentTime(?string $time): string
         .stat-label {
             color: var(--muted);
             font-size: 11px;
-            font-weight: 800;
+            font-weight: 600;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
@@ -330,7 +332,7 @@ function formatAppointmentTime(?string $time): string
             margin-top: 10px;
             color: var(--green-dark);
             font-size: 28px;
-            font-weight: 850;
+            font-weight: 600;
             line-height: 1;
         }
 
@@ -367,7 +369,7 @@ function formatAppointmentTime(?string $time): string
             border-bottom: 1px solid var(--border);
             color: #65736b;
             font-size: 11px;
-            font-weight: 850;
+            font-weight: 600;
             letter-spacing: .8px;
             text-transform: uppercase;
         }
@@ -406,7 +408,7 @@ function formatAppointmentTime(?string $time): string
             border-radius: 9px;
             color: var(--text);
             font-size: 13px;
-            font-weight: 850;
+            font-weight: 600;
         }
 
         .today .day-number {
@@ -463,14 +465,14 @@ function formatAppointmentTime(?string $time): string
             margin-bottom: 2px;
             color: #718078;
             font-size: 10px;
-            font-weight: 800;
+            font-weight: 600;
         }
 
         .appointment-pet {
             display: block;
             color: var(--green-dark);
             font-size: 11px;
-            font-weight: 850;
+            font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -494,7 +496,7 @@ function formatAppointmentTime(?string $time): string
             padding: 4px 5px;
             color: var(--green);
             font-size: 10px;
-            font-weight: 850;
+            font-weight: 600;
             text-decoration: none;
         }
 
@@ -518,7 +520,7 @@ function formatAppointmentTime(?string $time): string
             gap: 7px;
             color: #66736b;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 500;
         }
 
         .legend-dot {
@@ -591,6 +593,77 @@ function formatAppointmentTime(?string $time): string
                 grid-template-columns: 1fr;
             }
         }
+
+        /* =====================================================
+           TYPOGRAPHY REFINEMENT
+           Keep the page elegant and readable without heavy bold text.
+           ===================================================== */
+        .page-title-wrap h1 {
+            font-weight: 700 !important;
+        }
+
+        .page-title-wrap p {
+            font-weight: 400 !important;
+        }
+
+        .month-heading h2 {
+            font-weight: 400 !important;
+        }
+
+        .calendar-btn {
+            font-weight: 500 !important;
+        }
+
+        .stat-label {
+            font-weight: 600 !important;
+        }
+
+        .stat-number {
+            font-weight: 500 !important;
+        }
+
+        .weekday {
+            font-weight: 600 !important;
+        }
+
+        .day-number {
+            font-weight: 500 !important;
+        }
+
+        .appointment-time {
+            font-weight: 500 !important;
+        }
+
+        .appointment-pet {
+            font-weight: 600 !important;
+        }
+
+        .appointment-service {
+            font-weight: 400 !important;
+        }
+
+        .more-link {
+            font-weight: 500 !important;
+        }
+
+        .legend-item {
+            font-weight: 400 !important;
+        }
+
+        /* Shared sidebar profile/brand text */
+        .sidebar-profile-text strong {
+            font-weight: 500 !important;
+        }
+
+        .brand-copy strong {
+            font-weight: 500 !important;
+        }
+
+        .sidebar-profile-text span,
+        .brand-copy span {
+            font-weight: 400 !important;
+        }
+
     </style>
 </head>
 <body>

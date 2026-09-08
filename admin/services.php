@@ -10,7 +10,7 @@ requireLogin();
    SERVICES CRUD
    Table: services
    Columns:
-   id, name, description, status, created_at
+   id, name, description, price, status, created_at
    ========================================================= */
 
 $message = '';
@@ -27,10 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
+        $price = trim($_POST['price'] ?? '');
         $status = $_POST['status'] ?? 'Active';
 
         if ($name === '') {
             $message = 'Please enter a service name.';
+            $message_type = 'error';
+        } elseif ($price === '' || !is_numeric($price) || (float)$price < 0) {
+            $message = 'Please enter a valid service price.';
             $message_type = 'error';
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
             $message = 'Invalid service status.';
@@ -38,13 +42,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $stmt = $pdo->prepare("
-                    INSERT INTO services (name, description, status)
-                    VALUES (:name, :description, :status)
+                    INSERT INTO services (name, description, price, status)
+                    VALUES (:name, :description, :price, :status)
                 ");
 
                 $stmt->execute([
                     ':name' => $name,
                     ':description' => $description !== '' ? $description : null,
+                    ':price' => number_format((float)$price, 2, '.', ''),
                     ':status' => $status
                 ]);
 
@@ -62,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $name = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
+        $price = trim($_POST['price'] ?? '');
         $status = $_POST['status'] ?? 'Active';
 
         if ($id <= 0) {
@@ -69,6 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'error';
         } elseif ($name === '') {
             $message = 'Please enter a service name.';
+            $message_type = 'error';
+        } elseif ($price === '' || !is_numeric($price) || (float)$price < 0) {
+            $message = 'Please enter a valid service price.';
             $message_type = 'error';
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
             $message = 'Invalid service status.';
@@ -79,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE services
                     SET name = :name,
                         description = :description,
+                        price = :price,
                         status = :status
                     WHERE id = :id
                 ");
@@ -86,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([
                     ':name' => $name,
                     ':description' => $description !== '' ? $description : null,
+                    ':price' => number_format((float)$price, 2, '.', ''),
                     ':status' => $status,
                     ':id' => $id
                 ]);
@@ -150,7 +161,7 @@ $search = trim($_GET['search'] ?? '');
 $status_filter = $_GET['status'] ?? '';
 
 $sql = "
-    SELECT id, name, description, status, created_at
+    SELECT id, name, description, price, status, created_at
     FROM services
     WHERE 1=1
 ";
@@ -696,52 +707,74 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+
 <style>
 /* =========================================================
-   SERVICES PAGE - SHARED ADMIN SIDEBAR LAYOUT FIX
+   SERVICES PAGE - CLEAN SHARED SIDEBAR LAYOUT
    ========================================================= */
-html, body {
-    margin: 0;
+
+html,
+body {
+    margin: 0 !important;
+    padding: 0 !important;
     min-height: 100%;
+    width: 100%;
 }
 
-body.admin-with-sidebar {
-    margin-left: 270px !important;
-    width: calc(100% - 270px) !important;
-    box-sizing: border-box;
-    overflow-x: hidden;
+body {
+    background: #f6f1e8;
+    color: #263b32;
 }
 
-body.admin-with-sidebar .page {
-    width: 100% !important;
-    max-width: 1250px !important;
-    margin: 38px auto 60px !important;
-    padding: 0 24px !important;
+.admin-main {
+    margin-left: 270px;
+    width: calc(100% - 270px);
+    min-height: 100vh;
     box-sizing: border-box;
 }
 
-body.admin-with-sidebar .page * {
+.admin-main .admin-header {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-main .page {
+    width: 100%;
+    max-width: 1250px;
+    margin: 38px auto 60px;
+    padding: 0 34px;
+    box-sizing: border-box;
+}
+
+.admin-main .page * {
     box-sizing: border-box;
 }
 
 @media (max-width: 980px) {
-    body.admin-with-sidebar {
-        margin-left: 0 !important;
-        width: 100% !important;
+    .admin-main {
+        margin-left: 0;
+        width: 100%;
     }
 
-    body.admin-with-sidebar .page {
-        width: 100% !important;
-        margin: 25px auto 45px !important;
-        padding: 0 18px !important;
+    .admin-main .page {
+        max-width: none;
+        margin: 25px auto 45px;
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 760px) {
+    .admin-main .page {
+        padding: 0 18px;
     }
 }
 </style>
 
 </head>
-<body class="admin-with-sidebar">
+<body>
 <?php include 'sidebar.php'; ?>
 
+<main class="admin-main">
 <header class="admin-header">
     <div class="brand">
         <div class="brand-icon">
@@ -831,6 +864,7 @@ body.admin-with-sidebar .page * {
                         <th>ID</th>
                         <th>Service</th>
                         <th>Description</th>
+                        <th>Price</th>
                         <th>Status</th>
                         <th>Created</th>
                         <th>Actions</th>
@@ -840,7 +874,7 @@ body.admin-with-sidebar .page * {
                 <tbody>
                 <?php if (empty($services)): ?>
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="empty">
                                 <div class="empty-icon">🐾</div>
                                 <strong>No services found.</strong>
@@ -868,7 +902,12 @@ body.admin-with-sidebar .page * {
                             </td>
 
                             <td>
-                                <span class="status <?= $service['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>">
+                                <strong style="color:#173d32;">
+                                    ₱<?= number_format((float)$service['price'], 2) ?>
+                                </strong>
+                            </td>
+
+                            <td>                                <span class="status <?= $service['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>">
                                     <?= htmlspecialchars($service['status']) ?>
                                 </span>
                             </td>
@@ -886,6 +925,7 @@ body.admin-with-sidebar .page * {
                                             <?= (int)$service["id"] ?>,
                                             <?= json_encode($service["name"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
                                             <?= json_encode($service["description"] ?? "", JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
+                                            <?= json_encode((float)$service["price"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
                                             <?= json_encode($service["status"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>
                                         )'
                                     >
@@ -909,6 +949,7 @@ body.admin-with-sidebar .page * {
         </div>
     </section>
 
+</main>
 </main>
 
 <!-- ADD / EDIT MODAL -->
@@ -943,6 +984,20 @@ body.admin-with-sidebar .page * {
             </div>
 
             <div class="form-group">
+                <label for="servicePrice">Service Price (₱)</label>
+                <input
+                    type="number"
+                    id="servicePrice"
+                    name="price"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    required
+                    placeholder="e.g. 500.00"
+                >
+            </div>
+
+            <div class="form-group">
                 <label for="serviceStatus">Status</label>
                 <select id="serviceStatus" name="status">
                     <option value="Active">Active</option>
@@ -969,6 +1024,7 @@ body.admin-with-sidebar .page * {
     const serviceId = document.getElementById('serviceId');
     const serviceName = document.getElementById('serviceName');
     const serviceDescription = document.getElementById('serviceDescription');
+    const servicePrice = document.getElementById('servicePrice');
     const serviceStatus = document.getElementById('serviceStatus');
     const modalTitle = document.getElementById('modalTitle');
     const modalSubtitle = document.getElementById('modalSubtitle');
@@ -978,6 +1034,7 @@ body.admin-with-sidebar .page * {
         serviceId.value = '';
         serviceName.value = '';
         serviceDescription.value = '';
+        servicePrice.value = '';
         serviceStatus.value = 'Active';
 
         modalTitle.textContent = 'Add Service';
@@ -987,11 +1044,12 @@ body.admin-with-sidebar .page * {
         serviceName.focus();
     }
 
-    function openEditModal(id, name, description, status) {
+    function openEditModal(id, name, description, price, status) {
         formAction.value = 'edit';
         serviceId.value = id;
         serviceName.value = name || '';
         serviceDescription.value = description || '';
+        servicePrice.value = price ?? '';
         serviceStatus.value = status || 'Active';
 
         modalTitle.textContent = 'Edit Service';
