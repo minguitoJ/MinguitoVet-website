@@ -1282,22 +1282,34 @@ h2 span {
 
 /* =========================================================
    DEDICATED SERVICES PAGE
+   Balanced 4 + 3 card layout
 ========================================================= */
 
+/*
+   Desktop:
+   Row 1 = 4 cards
+   Row 2 = 3 cards centered underneath
+
+   Flexbox is used here instead of manual 12-column
+   positioning so the spacing stays even.
+*/
+.services-page .service-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 20px;
+}
+
 .services-page .service-card {
-    grid-column: span 3;
+    flex: 0 0 calc((100% - 60px) / 4);
+    min-width: 0;
 }
 
-.services-page .service-card:nth-child(5) {
-    grid-column: 2 / span 3;
-}
-
-.services-page .service-card:nth-child(6) {
-    grid-column: 6 / span 3;
-}
-
+.services-page .service-card:nth-child(5),
+.services-page .service-card:nth-child(6),
 .services-page .service-card:nth-child(7) {
-    grid-column: 10 / span 3;
+    grid-column: auto;
 }
 
 .services-page .service-card:hover {
@@ -1329,6 +1341,7 @@ h2 span {
     }
 
     .services-page .service-grid {
+        display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 20px;
     }
@@ -1362,6 +1375,7 @@ h2 span {
     .services-page .service-grid {
         width: 90%;
         margin: 0 auto;
+        display: grid;
         grid-template-columns: 1fr;
         gap: 20px;
     }
