@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $allowedStatuses = [
         'Pending',
-        'Confirmed',
+        'Approved',
         'Completed',
         'Cancelled'
     ];
@@ -175,11 +175,11 @@ $pendingAppointments = (int) $pdo
     ")
     ->fetchColumn();
 
-$confirmedAppointments = (int) $pdo
+$approvedAppointments = (int) $pdo
     ->query("
         SELECT COUNT(*)
         FROM appointments
-        WHERE status = 'Confirmed'
+        WHERE status = 'Approved'
     ")
     ->fetchColumn();
 
@@ -316,20 +316,29 @@ $completedAppointments = (int) $pdo
 
 
         .brand-icon {
-            width: 42px;
-            height: 42px;
+            width: 58px;
+            height: 58px;
+            flex: 0 0 58px;
 
-            border-radius: 12px;
+            border-radius: 14px;
 
-            background: var(--gold);
+            background: #f8efe2;
+            border: 1px solid rgba(212, 161, 92, .35);
+            padding: 5px;
 
             display: flex;
-
             align-items: center;
-
             justify-content: center;
+            overflow: hidden;
 
-            font-size: 20px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .12);
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
         }
 
 
@@ -973,7 +982,10 @@ $completedAppointments = (int) $pdo
         <div class="brand">
 
             <div class="brand-icon">
-                🐾
+                <img
+                    src="../assets/images/logo2.png"
+                    alt="Minguito Veterinary Clinic Logo"
+                >
             </div>
 
             <div class="brand-text">
@@ -1080,11 +1092,11 @@ $completedAppointments = (int) $pdo
             <div class="stat">
 
                 <div class="stat-label">
-                    Confirmed
+                    Approved
                 </div>
 
                 <div class="stat-number">
-                    <?= $confirmedAppointments ?>
+                    <?= $approvedAppointments ?>
                 </div>
 
             </div>
@@ -1165,12 +1177,12 @@ $completedAppointments = (int) $pdo
                         </option>
 
                         <option
-                            value="Confirmed"
-                            <?= $statusFilter === 'Confirmed'
+                            value="Approved"
+                            <?= $statusFilter === 'Approved'
                                 ? 'selected'
                                 : '' ?>
                         >
-                            Confirmed
+                            Approved
                         </option>
 
                         <option
@@ -1474,14 +1486,14 @@ $completedAppointments = (int) $pdo
 
 
                                                 <option
-                                                    value="Confirmed"
+                                                    value="Approved"
                                                     <?= $appointment[
                                                         'status'
-                                                    ] === 'Confirmed'
+                                                    ] === 'Approved'
                                                         ? 'selected'
                                                         : '' ?>
                                                 >
-                                                    Confirmed
+                                                    Approved
                                                 </option>
 
 

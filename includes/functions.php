@@ -1,6 +1,5 @@
 <?php
 
-
 function clean($data)
 {
     return htmlspecialchars(
@@ -10,25 +9,22 @@ function clean($data)
     );
 }
 
-
 function redirect($page)
 {
     header("Location: $page");
     exit;
 }
 
-
 function isLoggedIn()
 {
     return isset($_SESSION['admin_id']);
 }
 
-
 function requireLogin()
 {
     if (!isLoggedIn()) {
 
-        header("Location: index.php");
+        header("Location: ../login.php?type=admin");
 
         exit;
     }

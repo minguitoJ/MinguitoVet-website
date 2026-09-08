@@ -30,6 +30,9 @@ include 'includes/navbar.php';
 
     <div class="container service-grid">
 
+
+        <!-- GENERAL CHECKUP -->
+
         <div class="service-card">
 
             <h3>General Checkup</h3>
@@ -43,12 +46,16 @@ include 'includes/navbar.php';
                 your pet's overall health.
             </p>
 
-            <a href="appointment.php" aria-label="Book General Checkup">
+            <a
+                href="appointment.php?service=General%20Checkup"
+                aria-label="Book General Checkup">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- VACCINATION -->
 
         <div class="service-card">
 
@@ -63,12 +70,16 @@ include 'includes/navbar.php';
                 preventive protection for pets.
             </p>
 
-            <a href="appointment.php" aria-label="Book Vaccination">
+            <a
+                href="appointment.php?service=Vaccination"
+                aria-label="Book Vaccination">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- PREVENTIVE CARE -->
 
         <div class="service-card">
 
@@ -83,12 +94,16 @@ include 'includes/navbar.php';
                 regular health checks.
             </p>
 
-            <a href="appointment.php" aria-label="Book Preventive Care">
+            <a
+                href="appointment.php?service=Preventive%20Care"
+                aria-label="Book Preventive Care">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- DENTAL CARE -->
 
         <div class="service-card">
 
@@ -103,12 +118,16 @@ include 'includes/navbar.php';
                 with proper dental care.
             </p>
 
-            <a href="appointment.php" aria-label="Book Dental Care">
+            <a
+                href="appointment.php?service=Dental%20Care"
+                aria-label="Book Dental Care">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- SURGERY & TREATMENT -->
 
         <div class="service-card">
 
@@ -123,12 +142,16 @@ include 'includes/navbar.php';
                 and veterinary treatment.
             </p>
 
-            <a href="appointment.php" aria-label="Book Surgery and Treatment">
+            <a
+                href="appointment.php?service=Surgery%20%26%20Treatment"
+                aria-label="Book Surgery and Treatment">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- LABORATORY & DIAGNOSTICS -->
 
         <div class="service-card">
 
@@ -143,12 +166,16 @@ include 'includes/navbar.php';
                 identify your pet's health needs.
             </p>
 
-            <a href="appointment.php" aria-label="Book Laboratory and Diagnostics">
+            <a
+                href="appointment.php?service=Laboratory%20%26%20Diagnostics"
+                aria-label="Book Laboratory and Diagnostics">
                 Book This Service →
             </a>
 
         </div>
 
+
+        <!-- GROOMING & WELLNESS -->
 
         <div class="service-card">
 
@@ -163,11 +190,14 @@ include 'includes/navbar.php';
                 for your pet.
             </p>
 
-            <a href="appointment.php" aria-label="Book Grooming and Wellness">
+            <a
+                href="appointment.php?service=Grooming%20%26%20Wellness"
+                aria-label="Book Grooming and Wellness">
                 Book This Service →
             </a>
 
         </div>
+
 
     </div>
 

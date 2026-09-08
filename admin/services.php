@@ -234,15 +234,25 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .brand-icon {
-            width: 43px;
-            height: 43px;
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
             border-radius: 50%;
             background: #d5aa5c;
-            color: #173d32;
-            display: grid;
-            place-items: center;
-            font-size: 21px;
-            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            overflow: hidden;
+            box-shadow: 0 5px 14px rgba(0, 0, 0, .12);
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            border-radius: 50%;
         }
 
         .brand-text h1 {
@@ -734,7 +744,12 @@ body.admin-with-sidebar .page * {
 
 <header class="admin-header">
     <div class="brand">
-        <div class="brand-icon">🐾</div>
+        <div class="brand-icon">
+            <img
+                src="../assets/images/logo2.png"
+                alt="Minguito Veterinary Clinic Logo"
+            >
+        </div>
         <div class="brand-text">
             <h1>Minguito Veterinary</h1>
             <span>ADMINISTRATION PANEL</span>

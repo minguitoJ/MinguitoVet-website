@@ -1,6 +1,13 @@
 <?php
 session_start();
 
+/*
+ * CSRF protection
+ */
+if (empty($_SESSION['register_csrf_token'])) {
+    $_SESSION['register_csrf_token'] = bin2hex(random_bytes(32));
+}
+
 require_once __DIR__ . '/config/database.php';
 
 if (isset($_SESSION['customer_id'])) {
@@ -42,6 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_POST['confirm_password'] ?? '';
 
     if (
+        !isset($_POST['csrf_token']) ||
+        !isset($_SESSION['register_csrf_token']) ||
+        !hash_equals(
+            $_SESSION['register_csrf_token'],
+            $_POST['csrf_token']
+        )
+    ) {
+
+        $error =
+            'Invalid form submission. Please refresh the page and try again.';
+
+    } elseif (
         $fullName === '' ||
         $email === '' ||
         $contact === '' ||
@@ -63,11 +82,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'Please enter a valid email address.';
 
     } elseif (
-        strlen($password) < 6
+        strlen($fullName) < 2 ||
+        strlen($fullName) > 100
     ) {
 
         $error =
-            'Password must be at least 6 characters.';
+            'Full name must be between 2 and 100 characters.';
+
+    } elseif (
+        strlen($email) > 150
+    ) {
+
+        $error =
+            'Email address is too long.';
+
+    } elseif (
+        !preg_match('/^09[0-9]{9}$/', $contact)
+    ) {
+
+        $error =
+            'Contact number must be exactly 11 digits and start with 09.';
+
+    } elseif (
+        strlen($password) < 8
+    ) {
+
+        $error =
+            'Password must be at least 8 characters.';
 
     } elseif (
         $password !== $confirmPassword
@@ -663,6 +704,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ) ?>"
         >
 
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= htmlspecialchars(
+                $_SESSION['register_csrf_token'],
+                ENT_QUOTES,
+                'UTF-8'
+            ) ?>"
+        >
+
         <div class="group">
 
             <label for="full_name">
@@ -680,6 +731,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) ?>"
                 placeholder="Enter your full name"
                 autocomplete="name"
+                minlength="2"
+                maxlength="100"
                 required
             >
 
@@ -704,6 +757,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ) ?>"
                     placeholder="you@example.com"
                     autocomplete="email"
+                    maxlength="150"
                     required
                 >
 
@@ -726,6 +780,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ) ?>"
                     placeholder="09XXXXXXXXX"
                     autocomplete="tel"
+                    inputmode="numeric"
+                    pattern="09[0-9]{9}"
+                    minlength="11"
+                    maxlength="11"
+                    title="Contact number must be exactly 11 digits and start with 09."
                     required
                 >
 
@@ -747,8 +806,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         id="password"
                         type="password"
                         name="password"
-                        placeholder="At least 6 characters"
+                        placeholder="At least 8 characters"
                         autocomplete="new-password"
+                        minlength="8"
                         required
                     >
 
@@ -779,6 +839,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         name="confirm_password"
                         placeholder="Repeat your password"
                         autocomplete="new-password"
+                        minlength="8"
                         required
                     >
 
@@ -837,6 +898,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </main>
 
 <script>
+
+const contactInput =
+    document.getElementById('contact_number');
+
+if (contactInput) {
+    contactInput.addEventListener('input', function() {
+        this.value = this.value
+            .replace(/\D/g, '')
+            .slice(0, 11);
+    });
+}
 
 document.querySelectorAll(
     '.toggle'

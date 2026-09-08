@@ -2264,7 +2264,7 @@ h2 span {
 
     width: 100%;
 
-    height: 400px;
+    height: 320px;
 
     object-fit: cover;
 
@@ -3444,8 +3444,9 @@ a:hover {
 
     .contact-form {
         grid-column: 2;
-        grid-row: 1 / span 2;
-        height: 100%;
+        grid-row: 1;
+        height: auto;
+        align-self: start;
     }
 
 }
@@ -3507,4 +3508,353 @@ a:hover {
 #mainNav > a:not(.nav-appointment):hover::after,
 #mainNav > a:not(.nav-appointment).active::after {
     width: 100%;
+}
+
+/* =========================================================
+   CONTACT PAGE — BALANCED THREE-COLUMN LAYOUT
+   Info | Map | Message Form
+   ========================================================= */
+
+@media (min-width: 1101px) {
+    .contact-grid {
+        grid-template-columns: minmax(280px, 0.9fr) minmax(280px, 0.9fr) minmax(320px, 1fr);
+        column-gap: 28px;
+        row-gap: 0;
+        align-items: start;
+    }
+
+    .contact-info {
+        grid-column: 1;
+        grid-row: 1;
+        padding: 30px;
+        height: auto;
+        box-sizing: border-box;
+    }
+
+    .contact-map {
+        grid-column: 2;
+        grid-row: 1;
+        margin-top: 0;
+        padding: 18px;
+        height: auto;
+        box-sizing: border-box;
+    }
+
+    .contact-form {
+        grid-column: 3;
+        grid-row: 1;
+        height: auto;
+        align-self: start;
+        padding: 30px;
+        box-sizing: border-box;
+    }
+
+    .contact-info h2 {
+        font-size: 34px;
+    }
+
+    .contact-info > p {
+        margin-bottom: 24px;
+    }
+
+    .contact-item {
+        margin-bottom: 10px;
+        padding: 15px 17px;
+    }
+
+    .contact-item p {
+        font-size: 13px;
+    }
+
+    .contact-form h2 {
+        margin-bottom: 20px;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+        padding: 13px 15px;
+        margin-bottom: 11px;
+    }
+
+    .contact-form textarea {
+        min-height: 115px;
+    }
+
+    .map-frame {
+        height: 300px;
+    }
+}
+
+/* Medium screens: return to a comfortable two-column layout */
+@media (min-width: 769px) and (max-width: 1100px) {
+    .contact-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 28px;
+        row-gap: 24px;
+        align-items: start;
+    }
+
+    .contact-info {
+        grid-column: 1;
+        grid-row: 1;
+        padding: 28px;
+    }
+
+    .contact-form {
+        grid-column: 2;
+        grid-row: 1;
+        height: auto;
+        align-self: start;
+        padding: 28px;
+    }
+
+    .contact-map {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin-top: 0;
+    }
+
+    .contact-form textarea {
+        min-height: 120px;
+    }
+}
+
+/* Mobile: keep everything stacked and comfortable */
+@media (max-width: 768px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+
+    .contact-info,
+    .contact-map,
+    .contact-form {
+        grid-column: auto;
+        grid-row: auto;
+        width: 100%;
+        height: auto;
+    }
+
+    .contact-form {
+        align-self: start;
+    }
+
+    .contact-form textarea {
+        min-height: 115px;
+    }
+}
+
+
+/* =========================================================
+   MINGUITO CONTACT PAGE — WARM PET CARE BACKGROUND
+   Decorative background enhancement
+   ========================================================= */
+
+.contact-section {
+    position: relative;
+    isolation: isolate;
+    background:
+        radial-gradient(circle at 8% 18%, rgba(181, 122, 47, .10) 0 90px, transparent 91px),
+        radial-gradient(circle at 92% 16%, rgba(7, 59, 42, .07) 0 115px, transparent 116px),
+        radial-gradient(circle at 86% 82%, rgba(181, 122, 47, .08) 0 150px, transparent 151px),
+        linear-gradient(135deg, #fbf3e6 0%, #f7eddd 48%, #f4e8d5 100%);
+    overflow: hidden;
+}
+
+/* Soft organic background shapes */
+.contact-section::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 420px;
+    height: 420px;
+    left: -220px;
+    top: 110px;
+    border: 2px solid rgba(181, 122, 47, .09);
+    border-radius: 48% 52% 62% 38%;
+    transform: rotate(22deg);
+    box-shadow:
+        0 0 0 35px rgba(181, 122, 47, .025),
+        0 0 0 70px rgba(181, 122, 47, .018);
+}
+
+/* Right-side organic shape */
+.contact-section::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 360px;
+    height: 360px;
+    right: -190px;
+    bottom: 40px;
+    border: 2px solid rgba(7, 59, 42, .07);
+    border-radius: 58% 42% 35% 65%;
+    transform: rotate(-25deg);
+    box-shadow:
+        0 0 0 28px rgba(7, 59, 42, .018),
+        0 0 0 58px rgba(7, 59, 42, .012);
+}
+
+/* Paw-print style decorative marks */
+.contact-grid::before,
+.contact-grid::after {
+    position: absolute;
+    z-index: -1;
+    color: rgba(181, 122, 47, .13);
+    font-family: Arial, sans-serif;
+    font-size: 48px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.contact-grid::before {
+    content: "🐾";
+    left: -25px;
+    top: 15px;
+    transform: rotate(-18deg);
+}
+
+.contact-grid::after {
+    content: "🐾";
+    right: -18px;
+    bottom: 5px;
+    transform: rotate(18deg);
+}
+
+/* More polished cards */
+.contact-info,
+.contact-map,
+.contact-form {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(181, 122, 47, .16);
+    box-shadow:
+        0 18px 40px rgba(7, 59, 42, .075),
+        0 3px 10px rgba(181, 122, 47, .035);
+    transition:
+        transform .3s ease,
+        box-shadow .3s ease,
+        border-color .3s ease;
+}
+
+.contact-info:hover,
+.contact-map:hover,
+.contact-form:hover {
+    transform: translateY(-4px);
+    border-color: rgba(181, 122, 47, .28);
+    box-shadow:
+        0 24px 48px rgba(7, 59, 42, .10),
+        0 5px 14px rgba(181, 122, 47, .05);
+}
+
+/* Small gold accent line at the top of each card */
+.contact-info::before,
+.contact-map::before,
+.contact-form::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 28px;
+    width: 58px;
+    height: 3px;
+    border-radius: 0 0 5px 5px;
+    background: var(--gold);
+}
+
+/* Contact information cards */
+.contact-item {
+    background: rgba(255, 255, 255, .62);
+    border-color: rgba(181, 122, 47, .15);
+}
+
+/* Map gets a cleaner framed appearance */
+.contact-map {
+    background: rgba(255, 255, 255, .82);
+}
+
+.map-frame {
+    border: 3px solid rgba(255, 255, 255, .8);
+    box-shadow: 0 8px 22px rgba(7, 59, 42, .10);
+}
+
+/* Form fields */
+.contact-form {
+    background: rgba(255, 255, 255, .88);
+}
+
+.contact-form input,
+.contact-form textarea {
+    background: #fcf7ef;
+    border-color: rgba(181, 122, 47, .25);
+}
+
+.contact-form input:hover,
+.contact-form textarea:hover {
+    border-color: rgba(181, 122, 47, .42);
+}
+
+/* Primary action */
+.contact-form .btn {
+    box-shadow: 0 8px 18px rgba(7, 59, 42, .12);
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.contact-form .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(7, 59, 42, .18);
+}
+
+/* Hero blends into the new background */
+.page-hero {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 45%, rgba(181, 122, 47, .08) 0 80px, transparent 81px),
+        radial-gradient(circle at 82% 35%, rgba(7, 59, 42, .055) 0 100px, transparent 101px),
+        linear-gradient(180deg, #faf2e5 0%, #f7eddd 100%);
+}
+
+.page-hero::before,
+.page-hero::after {
+    content: "🐾";
+    position: absolute;
+    color: rgba(181, 122, 47, .10);
+    font-size: 44px;
+    pointer-events: none;
+}
+
+.page-hero::before {
+    left: 12%;
+    top: 25%;
+    transform: rotate(-18deg);
+}
+
+.page-hero::after {
+    right: 13%;
+    bottom: 18%;
+    transform: rotate(18deg);
+}
+
+/* Keep decorations subtle on smaller screens */
+@media (max-width: 768px) {
+    .contact-section {
+        background:
+            radial-gradient(circle at 10% 10%, rgba(181, 122, 47, .08) 0 70px, transparent 71px),
+            linear-gradient(135deg, #fbf3e6 0%, #f6ead8 100%);
+    }
+
+    .contact-grid::before,
+    .contact-grid::after,
+    .page-hero::before,
+    .page-hero::after {
+        opacity: .5;
+    }
+
+    .contact-info:hover,
+    .contact-map:hover,
+    .contact-form:hover {
+        transform: none;
+    }
 }

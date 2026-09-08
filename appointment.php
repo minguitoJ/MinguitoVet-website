@@ -42,6 +42,25 @@ $pageTitle = 'Book an Appointment';
 
 $today = date('Y-m-d');
 
+$selectedService = isset($_GET['service'])
+    ? trim($_GET['service'])
+    : '';
+
+$services = [
+    'General Checkup',
+    'Vaccination',
+    'Preventive Care',
+    'Dental Care',
+    'Surgery & Treatment',
+    'Laboratory & Diagnostics',
+    'Grooming & Wellness'
+];
+
+if (!in_array($selectedService, $services, true)) {
+    $selectedService = '';
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | CLINIC HOURS
@@ -392,23 +411,6 @@ include 'includes/navbar.php';
 .appointment-page .input-wrap {
     position: relative;
 }
-
-.appointment-page .input-icon {
-    position: absolute;
-
-    left: 17px;
-    top: 50%;
-
-    transform: translateY(-50%);
-
-    color: #be7e26;
-
-    font-size: 15px;
-
-    pointer-events: none;
-}
-
-
 /* =========================================================
    INPUTS / SELECT
 ========================================================= */
@@ -440,12 +442,6 @@ include 'includes/navbar.php';
         box-shadow 0.2s ease,
         background 0.2s ease;
 }
-
-.appointment-page input.has-icon,
-.appointment-page select.has-icon {
-    padding-left: 45px;
-}
-
 .appointment-page input::placeholder {
     color: #718078;
 }
@@ -856,13 +852,8 @@ include 'includes/navbar.php';
                         </label>
 
                         <div class="input-wrap">
-
-                            <span class="input-icon">
-                                ●
-                            </span>
-
-                            <input
-                                class="has-icon"
+<input
+                                
                                 id="owner_name"
                                 type="text"
                                 name="owner_name"
@@ -892,18 +883,12 @@ include 'includes/navbar.php';
                         </label>
 
                         <div class="input-wrap">
-
-                            <span class="input-icon">
-                                ●
-                            </span>
-
-                            <select
-                                class="has-icon"
+<select
                                 id="pet_type"
                                 name="pet_type"
                                 required>
 
-                                <option value="">
+                                <option value="" disabled selected hidden>
                                     Select animal type
                                 </option>
 
@@ -935,13 +920,8 @@ include 'includes/navbar.php';
                     </label>
 
                     <div class="input-wrap">
-
-                        <span class="input-icon">
-                            ●
-                        </span>
-
-                        <input
-                            class="has-icon"
+<input
+                            
                             id="pet_name"
                             type="text"
                             name="pet_name"
@@ -963,42 +943,58 @@ include 'includes/navbar.php';
                     </label>
 
                     <div class="input-wrap">
-
-                        <span class="input-icon">
-                            ✦
-                        </span>
-
-                        <select
-                            class="has-icon"
+<select
                             id="service"
                             name="service"
                             required>
 
-                            <option value="">
+                            <option
+                                value=""
+                                disabled
+                                hidden
+                                <?= $selectedService === '' ? 'selected' : '' ?>>
                                 Select a service
                             </option>
 
-                            <option value="Consultation & Check-up">
-                                Consultation &amp; Check-up
+                            <option
+                                value="General Checkup"
+                                <?= $selectedService === 'General Checkup' ? 'selected' : '' ?>>
+                                General Checkup
                             </option>
 
-                            <option value="Vaccination & Deworming">
-                                Vaccination &amp; Deworming
+                            <option
+                                value="Vaccination"
+                                <?= $selectedService === 'Vaccination' ? 'selected' : '' ?>>
+                                Vaccination
                             </option>
 
-                            <option value="Surgery & Treatment">
-                                Surgery &amp; Treatment
+                            <option
+                                value="Preventive Care"
+                                <?= $selectedService === 'Preventive Care' ? 'selected' : '' ?>>
+                                Preventive Care
                             </option>
 
-                            <option value="Laboratory & Diagnostics">
-                                Laboratory &amp; Diagnostics
-                            </option>
-
-                            <option value="Dental Care">
+                            <option
+                                value="Dental Care"
+                                <?= $selectedService === 'Dental Care' ? 'selected' : '' ?>>
                                 Dental Care
                             </option>
 
-                            <option value="Grooming & Wellness">
+                            <option
+                                value="Surgery & Treatment"
+                                <?= $selectedService === 'Surgery & Treatment' ? 'selected' : '' ?>>
+                                Surgery &amp; Treatment
+                            </option>
+
+                            <option
+                                value="Laboratory & Diagnostics"
+                                <?= $selectedService === 'Laboratory & Diagnostics' ? 'selected' : '' ?>>
+                                Laboratory &amp; Diagnostics
+                            </option>
+
+                            <option
+                                value="Grooming & Wellness"
+                                <?= $selectedService === 'Grooming & Wellness' ? 'selected' : '' ?>>
                                 Grooming &amp; Wellness
                             </option>
 
@@ -1024,13 +1020,8 @@ include 'includes/navbar.php';
                         </label>
 
                         <div class="input-wrap">
-
-                            <span class="input-icon">
-                                ▣
-                            </span>
-
-                            <input
-                                class="has-icon"
+<input
+                                
                                 id="appointment_date"
                                 type="date"
                                 name="appointment_date"
@@ -1058,13 +1049,8 @@ include 'includes/navbar.php';
                         </label>
 
                         <div class="input-wrap">
-
-                            <span class="input-icon">
-                                ◷
-                            </span>
-
-                            <input
-                                class="has-icon"
+<input
+                                
                                 id="appointment_time"
                                 type="time"
                                 name="appointment_time"
