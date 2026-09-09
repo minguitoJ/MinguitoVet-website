@@ -389,7 +389,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         =============================== */
         .stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
             margin-bottom: 25px;
         }
@@ -699,7 +699,6 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
             <div class="stat"><div class="stat-label">Total Services</div><div class="stat-number"><?= $totalServices ?></div></div>
             <div class="stat"><div class="stat-label">Active Services</div><div class="stat-number"><?= $activeServices ?></div></div>
             <div class="stat"><div class="stat-label">Inactive Services</div><div class="stat-number"><?= $inactiveServices ?></div></div>
-            <div class="stat"><div class="stat-label">Service Status</div><div class="stat-number">Manage</div></div>
         </section>
 
         <section class="filter-card">

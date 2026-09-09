@@ -51,8 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Please enter a valid stock quantity.';
             $message_type = 'error';
 
-        } elseif ((int)$stock > 6) {
-            $message = 'Maximum stock is 6.';
+        } elseif ((int)$stock > 5) {
+            $message = 'Maximum stock is 5.';
             $message_type = 'error';
 
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
@@ -117,8 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Please enter a valid stock quantity.';
             $message_type = 'error';
 
-        } elseif ((int)$stock > 6) {
-            $message = 'Maximum stock is 6.';
+        } elseif ((int)$stock > 5) {
+            $message = 'Maximum stock is 5.';
             $message_type = 'error';
 
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
@@ -128,13 +128,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
 
             try {
+                /*
+                 * IMPORTANT:
+                 * Editing a medicine must NOT change its stock.
+                 * Stock can only be replenished through the Restock button
+                 * when the current stock reaches 0.
+                 */
                 $stmt = $pdo->prepare("
                     UPDATE medicines
                     SET
                         name = :name,
                         description = :description,
                         price = :price,
-                        stock = :stock,
                         status = :status
                     WHERE id = :id
                 ");
@@ -143,7 +148,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':name' => $name,
                     ':description' => $description !== '' ? $description : null,
                     ':price' => number_format((float)$price, 2, '.', ''),
-                    ':stock' => (int)$stock,
                     ':status' => $status,
                     ':id' => $id
                 ]);
@@ -153,6 +157,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             } catch (PDOException $e) {
                 $message = 'Unable to update the medicine.';
+                $message_type = 'error';
+            }
+        }
+    }
+
+    /* RESTOCK - ADMIN CAN CHOOSE QUANTITY, ONLY WHEN CURRENT STOCK IS 0 */
+    elseif ($action === 'restock') {
+
+        $id = (int)($_POST['id'] ?? 0);
+        $restockQuantity = (int)($_POST['restock_quantity'] ?? 0);
+
+        if ($id <= 0) {
+            $message = 'Invalid medicine.';
+            $message_type = 'error';
+
+        } elseif ($restockQuantity < 1 || $restockQuantity > 5) {
+            $message = 'Restock quantity must be between 1 and 5.';
+            $message_type = 'error';
+
+        } else {
+
+            try {
+                /*
+                 * Admin can choose the restock quantity.
+                 * Restock is allowed ONLY when current stock is exactly 0.
+                 * Maximum stock is 5.
+                 */
+                $stmt = $pdo->prepare("
+                    UPDATE medicines
+                    SET stock = :restock_quantity
+                    WHERE id = :id
+                    AND stock = 0
+                ");
+
+                $stmt->execute([
+                    ':restock_quantity' => $restockQuantity,
+                    ':id' => $id
+                ]);
+
+                if ($stmt->rowCount() > 0) {
+                    header('Location: medicines.php?success=restocked');
+                    exit;
+                }
+
+                $checkStmt = $pdo->prepare("
+                    SELECT stock
+                    FROM medicines
+                    WHERE id = :id
+                    LIMIT 1
+                ");
+                $checkStmt->execute([':id' => $id]);
+                $currentStock = $checkStmt->fetchColumn();
+
+                if ($currentStock === false) {
+                    $message = 'Medicine not found.';
+                } elseif ((int)$currentStock > 0) {
+                    $message = 'Restock is available only when stock reaches 0.';
+                } else {
+                    $message = 'Unable to restock the medicine.';
+                }
+
+                $message_type = 'error';
+
+            } catch (PDOException $e) {
+                $message = 'Unable to restock the medicine.';
                 $message_type = 'error';
             }
         }
@@ -204,6 +273,11 @@ if (isset($_GET['success'])) {
 
         case 'updated':
             $message = 'Medicine updated successfully.';
+            $message_type = 'success';
+            break;
+
+        case 'restocked':
+            $message = 'Stock restocked successfully.';
             $message_type = 'success';
             break;
 
@@ -663,8 +737,26 @@ function medicine_json($value): string
             cursor:pointer;
         }
         .edit-btn { background:#f2e7cf; color:#806025; }
+        .restock-btn { background:#e5f2e8; color:#2b7748; }
+        .restock-select {
+            height:34px;
+            padding:0 8px;
+            border:1px solid #cfe1d4;
+            border-radius:8px;
+            background:#f7fbf8;
+            color:#2b7748;
+            font-family:inherit;
+            font-size:10px;
+            font-weight:800;
+            cursor:pointer;
+            outline:none;
+        }
+        .restock-select:focus {
+            border-color:#2b7748;
+            box-shadow:0 0 0 2px rgba(43,119,72,.10);
+        }
         .delete-btn { background:#f8e3e0; color:var(--danger); }
-        .edit-btn:hover, .delete-btn:hover { filter:brightness(.97); }
+        .edit-btn:hover, .restock-btn:hover, .delete-btn:hover { filter:brightness(.97); }
 
         .empty { padding:55px 20px; text-align:center; color:var(--muted); font-size:14px; }
         .empty-icon { font-size:35px; margin-bottom:10px; }
@@ -840,15 +932,15 @@ function medicine_json($value): string
                                 $stock = (int)$medicine['stock'];
                                 if ($stock <= 0) {
                                     $stockClass = 'stock-out';
-                                    $stockText = '0 / 6';
+                                    $stockText = '0 / 5';
                                     $stockNote = 'Restock Required';
-                                } elseif ($stock <= 5) {
+                                } elseif ($stock < 5) {
                                     $stockClass = 'stock-low';
-                                    $stockText = $stock . ' / 6';
-                                    $stockNote = 'Restock Suggested';
+                                    $stockText = $stock . ' / 5';
+                                    $stockNote = 'Stock Available';
                                 } else {
                                     $stockClass = 'stock-ok';
-                                    $stockText = $stock . ' / 6';
+                                    $stockText = '5 / 5';
                                     $stockNote = 'Stock Full';
                                 }
                             ?>
@@ -873,6 +965,33 @@ function medicine_json($value): string
                                             <?= (int)$medicine["stock"] ?>,
                                             <?= medicine_json($medicine["status"]) ?>
                                         )'>Edit</button>
+
+                                        <?php if ((int)$medicine['stock'] === 0): ?>
+                                            <form method="POST" onsubmit="return confirmRestock(this);" style="display:flex; align-items:center; gap:7px;">
+                                                <input type="hidden" name="action" value="restock">
+                                                <input type="hidden" name="id" value="<?= (int)$medicine['id'] ?>">
+
+                                                <select
+                                                    name="restock_quantity"
+                                                    class="restock-select"
+                                                    title="Choose restock quantity"
+                                                    aria-label="Restock quantity"
+                                                >
+                                                    <option value="1">+1</option>
+                                                    <option value="2">+2</option>
+                                                    <option value="3">+3</option>
+                                                    <option value="4">+4</option>
+                                                    <option value="5">+5</option>
+                                                </select>
+
+                                                <button
+                                                    type="submit"
+                                                    class="action-btn restock-btn"
+                                                    title="Restock selected quantity"
+                                                >Restock Stock</button>
+                                            </form>
+                                        <?php endif; ?>
+
                                         <form method="POST" onsubmit="return confirm('Delete this medicine? This action cannot be undone.');">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= (int)$medicine['id'] ?>">
@@ -988,14 +1107,14 @@ function medicine_json($value): string
                         id="medicineStock"
                         name="stock"
                         min="0"
-                        max="6"
+                        max="5"
                         step="1"
                         required
-                        placeholder="0 to 6"
+                        placeholder="0 to 5"
                     >
 
                     <span class="input-help">
-                        Maximum stock is 6. Enter 0 to 6.
+                        Maximum stock is 5. Enter 0 to 5.
                     </span>
 
                 </div>
@@ -1075,6 +1194,8 @@ function medicine_json($value): string
         medicineDescription.value = '';
         medicinePrice.value = '';
         medicineStock.value = '0';
+        medicineStock.readOnly = false;
+        medicineStock.title = '';
         medicineStatus.value = 'Active';
 
         modalTitle.textContent = 'Add Medicine';
@@ -1103,11 +1224,13 @@ function medicine_json($value): string
         medicineDescription.value = description || '';
         medicinePrice.value = price ?? '';
         medicineStock.value = stock ?? 0;
+        medicineStock.readOnly = true;
+        medicineStock.title = 'Stock cannot be changed here. Use Restock Stock only when stock reaches 0.';
         medicineStatus.value = status || 'Active';
 
         modalTitle.textContent = 'Edit Medicine';
         modalDescription.textContent =
-            'Update the medicine information, price, or stock.';
+            'Update medicine details. Stock is managed separately.';
 
         medicineModal.classList.add('show');
         medicineModal.setAttribute('aria-hidden', 'false');
@@ -1122,11 +1245,22 @@ function medicine_json($value): string
     }
 
 
+    function confirmRestock(form) {
+        const select = form.querySelector('select[name="restock_quantity"]');
+        const quantity = parseInt(select.value, 10);
+
+        return confirm(
+            'Restock ' + quantity + ' stock' + (quantity === 1 ? '' : 's') +
+            '?\\n\\nThe current stock is 0, so it will become ' +
+            quantity + ' / 5.'
+        );
+    }
+
     medicineForm.addEventListener('submit', function (event) {
         const stock = parseInt(medicineStock.value, 10);
-        if (Number.isNaN(stock) || stock < 0 || stock > 6) {
+        if (Number.isNaN(stock) || stock < 0 || stock > 5) {
             event.preventDefault();
-            alert('Maximum stock is 6. Please enter a quantity from 0 to 6.');
+            alert('Maximum stock is 5. Please enter a quantity from 0 to 5.');
             medicineStock.focus();
         }
     });

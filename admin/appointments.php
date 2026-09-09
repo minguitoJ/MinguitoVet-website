@@ -56,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ) {
 
         /*
-         * Completed appointments are permanently locked.
-         * They cannot be changed again after completion.
+         * Completed and Cancelled appointments are permanently locked.
+         * They cannot be changed again after completion/cancellation.
          */
         $currentStmt = $pdo->prepare("
             SELECT status
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $currentStatus = $currentStmt->fetchColumn();
 
-        if ($currentStatus !== 'Completed') {
+        if ($currentStatus !== 'Completed' && $currentStatus !== 'Cancelled') {
 
             /*
              * An appointment can only become Completed
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE appointments
                     SET status = :status
                     WHERE id = :id
-                    AND status <> 'Completed'
+                    AND status NOT IN ('Completed', 'Cancelled')
                 ");
 
                 $stmt->execute([
@@ -1262,8 +1262,6 @@ $completedAppointments = (int) $pdo
 
             <p>
                 Manage and monitor all veterinary appointments.
-                Use <strong>Show / Sort By</strong> to switch between
-                your teacher's latest-booking view and date/time views.
             </p>
 
         </section>
@@ -1723,6 +1721,12 @@ $completedAppointments = (int) $pdo
 
                                             <div class="locked-status">
                                                 🔒 Completed
+                                            </div>
+
+                                        <?php elseif ($appointment['status'] === 'Cancelled'): ?>
+
+                                            <div class="locked-status">
+                                                🔒 Cancelled
                                             </div>
 
                                         <?php else: ?>
