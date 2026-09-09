@@ -69,6 +69,30 @@ $totalMessages = getCount(
     "SELECT COUNT(*) FROM contact_messages"
 );
 
+// Medicine stock / restock monitoring
+// Maximum stock per medicine: 6
+$maxMedicineStock = 6;
+
+$restockStmt = $pdo->query("
+    SELECT id, name, stock, status
+    FROM medicines
+    WHERE status = 'Active' AND stock <= 5
+    ORDER BY stock ASC, name ASC
+");
+$restockMedicines = $restockStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$restockCount = count($restockMedicines);
+$outOfStockCount = 0;
+$lowStockCount = 0;
+
+foreach ($restockMedicines as $medicine) {
+    if ((int) $medicine['stock'] <= 0) {
+        $outOfStockCount++;
+    } else {
+        $lowStockCount++;
+    }
+}
+
 // Today's appointments
 $today = date('Y-m-d');
 
@@ -1010,6 +1034,165 @@ function formatTimeValue(?string $time): string
 
 
         /* =====================================================
+           MEDICINE RESTOCK ALERT
+        ===================================================== */
+        .restock-alert {
+            margin-bottom: 23px;
+            border: 1px solid #eadfc9;
+            border-radius: 17px;
+            background: var(--white);
+            box-shadow: 0 8px 25px rgba(40, 65, 50, .045);
+            overflow: hidden;
+        }
+        .restock-alert.has-alert { border-color: #ead7ad; }
+        .restock-alert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 17px 21px;
+            background: #fffaf0;
+            border-bottom: 1px solid #f0e6d1;
+        }
+        .restock-heading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .restock-icon {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: #fbf2df;
+            color: var(--gold);
+            font-size: 16px;
+            flex: 0 0 auto;
+        }
+        .restock-title {
+            margin: 0;
+            color: var(--green-dark);
+            font-size: 15px;
+            font-weight: 800;
+        }
+        .restock-subtitle {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 11px;
+        }
+        .restock-summary {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .restock-count {
+            padding: 6px 10px;
+            border-radius: 30px;
+            background: #fbf2df;
+            color: #9a7425;
+            font-size: 9px;
+            font-weight: 800;
+        }
+        .restock-count.out {
+            background: #faeeee;
+            color: var(--danger);
+        }
+        .restock-body { padding: 0; }
+        .restock-row {
+            display: grid;
+            grid-template-columns: minmax(160px, 1fr) 110px 190px;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 21px;
+            border-bottom: 1px solid #eef0ed;
+        }
+        .restock-row:last-child { border-bottom: 0; }
+        .restock-name strong {
+            display: block;
+            color: var(--text);
+            font-size: 12px;
+        }
+        .restock-name span {
+            display: block;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 10px;
+        }
+        .stock-meter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stock-bar {
+            width: 58px;
+            height: 7px;
+            border-radius: 20px;
+            background: #edf0ed;
+            overflow: hidden;
+        }
+        .stock-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: var(--gold);
+        }
+        .stock-number {
+            color: var(--text);
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .restock-status {
+            justify-self: end;
+            width: max-content;
+            padding: 6px 9px;
+            border-radius: 30px;
+            font-size: 9px;
+            font-weight: 800;
+        }
+        .restock-status.low {
+            background: #fbf2df;
+            color: #9a7425;
+        }
+        .restock-status.out {
+            background: #faeeee;
+            color: var(--danger);
+        }
+        .restock-empty {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 17px 21px;
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .restock-empty i { font-size: 17px; }
+        .restock-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 21px;
+            border-top: 1px solid var(--border);
+            background: #fcfdfb;
+        }
+
+        @media (max-width: 700px) {
+            .restock-alert-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .restock-summary { justify-content: flex-start; }
+            .restock-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .restock-status { justify-self: start; }
+            .stock-meter { width: max-content; }
+        }
+
+        /* =====================================================
            RESPONSIVE
         ===================================================== */
 
@@ -1316,6 +1499,81 @@ function formatTimeValue(?string $time): string
             </article>
 
 
+        </section>
+
+
+        <!-- =================================================
+             MEDICINE RESTOCK ALERT
+        ================================================== -->
+        <section class="restock-alert <?= $restockCount > 0 ? 'has-alert' : '' ?>">
+            <div class="restock-alert-header">
+                <div class="restock-heading">
+                    <div class="restock-icon">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <h2 class="restock-title">Medicine Stock Monitoring</h2>
+                        <p class="restock-subtitle">
+                            Maximum stock per medicine is <?= $maxMedicineStock ?>.
+                            Low stock starts at 3 or below.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="restock-summary">
+                    <?php if ($outOfStockCount > 0): ?>
+                        <span class="restock-count out">
+                            <?= $outOfStockCount ?> Out of Stock
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($lowStockCount > 0): ?>
+                        <span class="restock-count">
+                            <?= $lowStockCount ?> Restock Suggested
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($restockCount === 0): ?>
+                        <span class="restock-count">All Stock OK</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="restock-body">
+                <?php if ($restockMedicines): ?>
+                    <?php foreach ($restockMedicines as $medicine): ?>
+                        <?php
+                            $stock = max(0, min($maxMedicineStock, (int) $medicine['stock']));
+                            $percentage = ($stock / $maxMedicineStock) * 100;
+                            $isOut = $stock <= 0;
+                        ?>
+                        <div class="restock-row">
+                            <div class="restock-name">
+                                <strong><?= htmlspecialchars($medicine['name']) ?></strong>
+                                <span>
+                                    <?= $isOut ? 'Needs immediate restocking.' : 'Consider adding stock.' ?>
+                                </span>
+                            </div>
+                            <div class="stock-meter">
+                                <div class="stock-bar">
+                                    <div class="stock-fill" style="width: <?= $percentage ?>%;"></div>
+                                </div>
+                                <span class="stock-number"><?= $stock ?> / <?= $maxMedicineStock ?></span>
+                            </div>
+                            <span class="restock-status <?= $isOut ? 'out' : 'low' ?>">
+                                <?= $isOut ? 'Restock Required' : 'Restock Suggested' ?>
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="restock-empty">
+                        <i class="fa-solid fa-circle-check"></i>
+                        All active medicines are currently stocked above the restock level.
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="restock-footer">
+                <a href="medicines.php" class="panel-link">Manage Medicines →</a>
+            </div>
         </section>
 
 

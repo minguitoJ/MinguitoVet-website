@@ -26,6 +26,73 @@ $billTotal = 0.00;
 
 /*
 |--------------------------------------------------------------------------
+| APPOINTMENT SERVICE HELPERS
+|--------------------------------------------------------------------------
+*/
+function getAppointmentServiceNames(string $serviceValue): array
+{
+    return array_values(array_unique(array_filter(
+        array_map(
+            static fn($name) => trim($name),
+            explode(',', $serviceValue)
+        ),
+        static fn($name) => $name !== ''
+    )));
+}
+
+function getActiveServicesByNames(
+    PDO $pdo,
+    array $serviceNames
+): array {
+    if (empty($serviceNames)) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+
+    foreach ($serviceNames as $index => $serviceName) {
+
+        $placeholder = ':service_' . $index;
+
+        $placeholders[] = $placeholder;
+        $params[$placeholder] = $serviceName;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT id, name, price
+        FROM services
+        WHERE status = 'Active'
+          AND LOWER(TRIM(name)) IN (" .
+        implode(', ', $placeholders) .
+        ")
+        ORDER BY name ASC
+    ");
+
+    foreach ($params as $placeholder => $value) {
+        $stmt->bindValue(
+            $placeholder,
+            $value,
+            PDO::PARAM_STR
+        );
+    }
+
+    $stmt->execute();
+
+    $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $map = [];
+
+    foreach ($services as $service) {
+        $map[
+            strtolower(trim($service['name']))
+        ] = $service;
+    }
+
+    return $map;
+}
+
+/*
+|--------------------------------------------------------------------------
 | LOAD APPOINTMENT
 |--------------------------------------------------------------------------
 */
@@ -63,22 +130,33 @@ try {
     }
 
     /*
-     * Always get the service from the Services table.
-     * No hard-coded service prices.
+     * Load every selected service from the Active Services table.
      */
-    $serviceStmt = $pdo->prepare("
-        SELECT id, name, price
-        FROM services
-        WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
-          AND status = 'Active'
-        LIMIT 1
-    ");
+    $appointmentServiceNames =
+        getAppointmentServiceNames(
+            (string)$appointment['service']
+        );
 
-    $serviceStmt->execute([
-        ':name' => $appointment['service']
-    ]);
+    $activeAppointmentServices =
+        getActiveServicesByNames(
+            $pdo,
+            $appointmentServiceNames
+        );
 
-    $service = $serviceStmt->fetch(PDO::FETCH_ASSOC);
+    $service = null;
+
+    if (!empty($appointmentServiceNames)) {
+
+        $firstServiceKey =
+            strtolower(
+                trim($appointmentServiceNames[0])
+            );
+
+        $service =
+            $activeAppointmentServices[
+                $firstServiceKey
+            ] ?? null;
+    }
 
     /*
      * Load the latest payment/bill prepared by the admin.
@@ -256,37 +334,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
 
             /*
              * Safety fallback:
-             * If the admin's bill has no items, create the service item
-             * from the current Active Services price.
+             * If the admin's bill has no items, create every selected
+             * service from the current Active Services prices.
              */
             if (empty($lockedItems)) {
 
-                $lockedServiceStmt = $pdo->prepare("
-                    SELECT id, name, price
-                    FROM services
-                    WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
-                      AND status = 'Active'
-                    LIMIT 1
-                    FOR UPDATE
-                ");
-
-                $lockedServiceStmt->execute([
-                    ':name' => $lockedAppointment['service']
-                ]);
-
-                $lockedService = $lockedServiceStmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$lockedService) {
-                    throw new Exception(
-                        'The appointment service is not currently Active in the Services page.'
+                $lockedServiceNames =
+                    getAppointmentServiceNames(
+                        (string)$lockedAppointment['service']
                     );
-                }
 
-                $servicePrice = (float)$lockedService['price'];
+                $lockedServices =
+                    getActiveServicesByNames(
+                        $pdo,
+                        $lockedServiceNames
+                    );
 
-                if ($servicePrice <= 0) {
+                if (empty($lockedServiceNames)) {
                     throw new Exception(
-                        'The appointment service does not have a valid price.'
+                        'The appointment has no veterinary services selected.'
                     );
                 }
 
@@ -311,18 +377,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     )
                 ");
 
-                $insertServiceItem->execute([
-                    ':payment_id' => $latestPayment['id'],
-                    ':item_name' => $lockedService['name'],
-                    ':unit_price' => $servicePrice,
-                    ':subtotal' => $servicePrice
-                ]);
+                foreach ($lockedServiceNames as $serviceName) {
+
+                    $serviceKey =
+                        strtolower(trim($serviceName));
+
+                    if (!isset($lockedServices[$serviceKey])) {
+                        throw new Exception(
+                            'The appointment service "' .
+                            $serviceName .
+                            '" is not currently Active in the Services page.'
+                        );
+                    }
+
+                    $lockedService =
+                        $lockedServices[$serviceKey];
+
+                    $servicePrice =
+                        (float)$lockedService['price'];
+
+                    if ($servicePrice <= 0) {
+                        throw new Exception(
+                            'The appointment service "' .
+                            $lockedService['name'] .
+                            '" does not have a valid price.'
+                        );
+                    }
+
+                    $insertServiceItem->execute([
+                        ':payment_id' =>
+                            $latestPayment['id'],
+                        ':item_name' =>
+                            $lockedService['name'],
+                        ':unit_price' =>
+                            $servicePrice,
+                        ':subtotal' =>
+                            $servicePrice
+                    ]);
+                }
 
                 $lockedItemsStmt->execute([
-                    ':payment_id' => $latestPayment['id']
+                    ':payment_id' =>
+                        $latestPayment['id']
                 ]);
 
-                $lockedItems = $lockedItemsStmt->fetchAll(PDO::FETCH_ASSOC);
+                $lockedItems =
+                    $lockedItemsStmt->fetchAll(
+                        PDO::FETCH_ASSOC
+                    );
             }
 
             /*
@@ -485,10 +587,40 @@ foreach ($paymentItems as $item) {
 $billTotal = round($billTotal, 2);
 
 /*
- * If there is no prepared bill yet, show the current service price.
+ * If there is no prepared bill yet, show the estimated total of all
+ * selected Active services.
  */
-if (empty($paymentItems) && $service) {
-    $billTotal = (float)$service['price'];
+if (empty($paymentItems)) {
+
+    $appointmentServiceNames =
+        getAppointmentServiceNames(
+            (string)($appointment['service'] ?? '')
+        );
+
+    $estimatedServices =
+        getActiveServicesByNames(
+            $pdo,
+            $appointmentServiceNames
+        );
+
+    $estimatedTotal = 0.00;
+
+    foreach (
+        $appointmentServiceNames
+        as $serviceName
+    ) {
+
+        $serviceKey =
+            strtolower(trim($serviceName));
+
+        if (isset($estimatedServices[$serviceKey])) {
+            $estimatedTotal +=
+                (float)$estimatedServices[$serviceKey]['price'];
+        }
+    }
+
+    $billTotal =
+        round($estimatedTotal, 2);
 }
 
 $pageTitle = 'Payment';

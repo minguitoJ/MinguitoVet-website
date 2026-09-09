@@ -51,6 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Please enter a valid stock quantity.';
             $message_type = 'error';
 
+        } elseif ((int)$stock > 6) {
+            $message = 'Maximum stock is 6.';
+            $message_type = 'error';
+
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
             $message = 'Invalid medicine status.';
             $message_type = 'error';
@@ -111,6 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (int)$stock < 0
         ) {
             $message = 'Please enter a valid stock quantity.';
+            $message_type = 'error';
+
+        } elseif ((int)$stock > 6) {
+            $message = 'Maximum stock is 6.';
             $message_type = 'error';
 
         } elseif (!in_array($status, ['Active', 'Inactive'], true)) {
@@ -290,20 +298,17 @@ function medicine_json($value): string
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Medicines | Minguito Veterinary Clinic</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="../assets/css/sidebar.css">
 
     <style>
         :root {
@@ -321,16 +326,9 @@ function medicine_json($value): string
             --danger: #a13d32;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html,
-        body {
-            min-height: 100%;
-        }
+        html, body { min-height: 100%; }
 
         body {
             min-height: 100vh;
@@ -339,21 +337,14 @@ function medicine_json($value): string
             background: linear-gradient(135deg, #fbf4e9, #f4e6d2);
         }
 
-        .admin-main {
-            margin-left: 270px;
-            width: calc(100% - 270px);
-            min-height: 100vh;
-        }
-
-        /* =====================================
-           HEADER
-        ===================================== */
-
+        /* ===============================
+           SHARED ADMIN HEADER
+        =============================== */
         .admin-header {
             background: var(--green);
             color: white;
             padding: 18px 0;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, .12);
+            box-shadow: 0 5px 20px rgba(0,0,0,.12);
         }
 
         .header-inner {
@@ -372,30 +363,31 @@ function medicine_json($value): string
         }
 
         .brand-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            background: var(--gold);
+            width: 58px;
+            height: 58px;
+            flex: 0 0 58px;
+            border-radius: 14px;
+            background: #f8efe2;
+            border: 1px solid rgba(212,161,92,.35);
+            padding: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 3px;
             overflow: hidden;
+            box-shadow: 0 6px 16px rgba(0,0,0,.12);
         }
 
         .brand-icon img {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            border-radius: 10px;
             display: block;
         }
 
         .brand-text strong {
             display: block;
-            font-family: "Playfair Display", Georgia, serif;
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .brand-text span {
@@ -423,30 +415,15 @@ function medicine_json($value): string
             transition: .2s ease;
         }
 
-        .header-link:hover {
-            background: rgba(255,255,255,.1);
-        }
+        .header-link:hover { background: rgba(255,255,255,.1); }
+        .header-link.logout { background: var(--gold); }
+        .header-link.logout:hover { background: var(--gold-light); }
 
-        .header-link.logout {
-            background: var(--gold);
-        }
-
-        .header-link.logout:hover {
-            background: var(--gold-light);
-        }
-
-        /* =====================================
-           MAIN
-        ===================================== */
-
-        .container {
-            width: min(1180px, 92%);
-            margin: auto;
-        }
-
-        .main {
-            padding: 40px 0 60px;
-        }
+        /* ===============================
+           MAIN / PAGE TITLE
+        =============================== */
+        .main { padding: 40px 0 60px; }
+        .container { width: min(1180px, 92%); margin: auto; }
 
         .page-title {
             margin-bottom: 28px;
@@ -471,10 +448,7 @@ function medicine_json($value): string
             margin-bottom: 8px;
         }
 
-        .page-title p {
-            color: var(--muted);
-            font-size: 14px;
-        }
+        .page-title p { color: var(--muted); font-size: 14px; }
 
         .primary-btn {
             display: inline-flex;
@@ -491,16 +465,14 @@ function medicine_json($value): string
             font-weight: 800;
             cursor: pointer;
             box-shadow: 0 6px 16px rgba(7,59,42,.14);
+            white-space: nowrap;
         }
 
-        .primary-btn:hover {
-            background: var(--gold);
-        }
+        .primary-btn:hover { background: var(--gold); }
 
-        /* =====================================
-           ALERT
-        ===================================== */
-
+        /* ===============================
+           ALERTS
+        =============================== */
         .alert {
             padding: 13px 16px;
             border-radius: 10px;
@@ -509,22 +481,12 @@ function medicine_json($value): string
             font-weight: 600;
         }
 
-        .alert.success {
-            background: #e7f3e9;
-            color: #387346;
-            border: 1px solid #c8e1ce;
-        }
+        .alert.success { background:#e7f3e9; color:#387346; border:1px solid #c8e1ce; }
+        .alert.error { background:#f8e7e5; color:#a13c32; border:1px solid #ecc5c0; }
 
-        .alert.error {
-            background: #f8e7e5;
-            color: #a13c32;
-            border: 1px solid #ecc5c0;
-        }
-
-        /* =====================================
+        /* ===============================
            STAT CARDS
-        ===================================== */
-
+        =============================== */
         .stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -549,20 +511,12 @@ function medicine_json($value): string
             margin-bottom: 6px;
         }
 
-        .stat-number {
-            color: var(--green);
-            font-size: 28px;
-            font-weight: 800;
-        }
+        .stat-number { color: var(--green); font-size: 28px; font-weight: 800; }
+        .stat-number.warning { color: var(--warning); }
 
-        .stat-number.warning {
-            color: var(--warning);
-        }
-
-        /* =====================================
+        /* ===============================
            FILTER BOX
-        ===================================== */
-
+        =============================== */
         .filter-card {
             background: white;
             border: 1px solid var(--border);
@@ -589,8 +543,7 @@ function medicine_json($value): string
             letter-spacing: .4px;
         }
 
-        .field input,
-        .field select {
+        .field input, .field select {
             width: 100%;
             height: 44px;
             padding: 0 12px;
@@ -603,14 +556,12 @@ function medicine_json($value): string
             outline: none;
         }
 
-        .field input:focus,
-        .field select:focus {
+        .field input:focus, .field select:focus {
             border-color: var(--gold);
             box-shadow: 0 0 0 3px rgba(181,122,47,.1);
         }
 
-        .filter-btn,
-        .clear-btn {
+        .filter-btn, .clear-btn {
             height: 44px;
             display: inline-flex;
             align-items: center;
@@ -624,30 +575,14 @@ function medicine_json($value): string
             text-decoration: none;
         }
 
-        .filter-btn {
-            border: 0;
-            background: var(--green);
-            color: white;
-        }
+        .filter-btn { border:0; background:var(--green); color:white; }
+        .filter-btn:hover { background:var(--gold); }
+        .clear-btn { border:1px solid var(--border); background:white; color:var(--green); }
+        .clear-btn:hover { background:var(--cream); }
 
-        .filter-btn:hover {
-            background: var(--gold);
-        }
-
-        .clear-btn {
-            border: 1px solid var(--border);
-            background: white;
-            color: var(--green);
-        }
-
-        .clear-btn:hover {
-            background: var(--cream);
-        }
-
-        /* =====================================
+        /* ===============================
            TABLE
-        ===================================== */
-
+        =============================== */
         .table-card {
             background: white;
             border: 1px solid var(--border);
@@ -664,361 +599,160 @@ function medicine_json($value): string
             border-bottom: 1px solid var(--border);
         }
 
-        .table-header h2 {
-            color: var(--green);
-            font-size: 18px;
-            font-weight: 800;
-        }
+        .table-header h2 { color:var(--green); font-size:18px; font-weight:800; }
+        .result-count { color:var(--muted); font-size:12px; }
+        .table-wrapper { overflow-x:auto; }
 
-        .result-count {
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 1050px;
-        }
+        table { width:100%; border-collapse:collapse; min-width:980px; }
 
         th {
-            padding: 14px 16px;
-            background: #fcf7ef;
-            color: var(--muted);
-            text-align: left;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: .6px;
+            padding:14px 16px;
+            background:#fcf7ef;
+            color:var(--muted);
+            text-align:left;
+            font-size:10px;
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.6px;
+            white-space:nowrap;
         }
 
         td {
-            padding: 15px 16px;
-            border-top: 1px solid #eee3d4;
-            font-size: 12px;
-            vertical-align: middle;
+            padding:15px 16px;
+            border-top:1px solid #eee3d4;
+            font-size:12px;
+            vertical-align:middle;
         }
 
-        tbody tr:hover {
-            background: #fffbf5;
-        }
+        tbody tr:hover { background:#fffbf5; }
 
-        .medicine-id {
-            color: var(--muted);
-            font-weight: 700;
-        }
-
-        .medicine-name {
-            color: var(--green);
-            font-size: 14px;
-            font-weight: 800;
-        }
-
-        .description {
-            max-width: 360px;
-            color: var(--muted);
-            line-height: 1.45;
-        }
-
-        .price {
-            color: var(--green);
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .stock {
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .stock-ok {
-            color: var(--success);
-        }
-
-        .stock-low {
-            color: var(--warning);
-        }
-
-        .stock-out {
-            color: var(--danger);
-        }
-
-        .stock-note {
-            display: block;
-            margin-top: 3px;
-            color: var(--muted);
-            font-size: 10px;
-            font-weight: 500;
-        }
+        .item-id { color:var(--muted); font-weight:700; }
+        .item-name { color:var(--green); font-size:14px; font-weight:800; }
+        .description { max-width:390px; color:var(--muted); line-height:1.45; }
+        .price { color:var(--green); font-weight:800; white-space:nowrap; }
 
         .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 30px;
-            font-size: 10px;
-            font-weight: 800;
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:6px 10px;
+            border-radius:30px;
+            font-size:10px;
+            font-weight:800;
         }
 
-        .status::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-        }
+        .status::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+        .status-active { background:#e5f2e8; color:#2b7748; }
+        .status-inactive { background:#eeeae5; color:#77736d; }
 
-        .status-active {
-            background: #e5f2e8;
-            color: #2b7748;
-        }
+        .stock { font-weight:800; white-space:nowrap; }
+        .stock-ok { color:var(--success); }
+        .stock-low { color:var(--warning); }
+        .stock-out { color:var(--danger); }
+        .stock-note { display:block; margin-top:3px; color:var(--muted); font-size:10px; font-weight:500; }
 
-        .status-inactive {
-            background: #eeeae5;
-            color: #77736d;
-        }
-
-        .actions {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-        }
-
+        .actions { display:flex; align-items:center; gap:7px; white-space:nowrap; }
         .action-btn {
-            height: 34px;
-            padding: 0 10px;
-            border: 0;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 10px;
-            font-weight: 800;
-            cursor: pointer;
+            height:34px;
+            padding:0 10px;
+            border:0;
+            border-radius:8px;
+            font-family:inherit;
+            font-size:10px;
+            font-weight:800;
+            cursor:pointer;
         }
+        .edit-btn { background:#f2e7cf; color:#806025; }
+        .delete-btn { background:#f8e3e0; color:var(--danger); }
+        .edit-btn:hover, .delete-btn:hover { filter:brightness(.97); }
 
-        .edit-btn {
-            background: #f2e7cf;
-            color: #806025;
-        }
+        .empty { padding:55px 20px; text-align:center; color:var(--muted); font-size:14px; }
+        .empty-icon { font-size:35px; margin-bottom:10px; }
 
-        .delete-btn {
-            background: #f8e3e0;
-            color: #a13d32;
-        }
-
-        .edit-btn:hover,
-        .delete-btn:hover {
-            filter: brightness(.97);
-        }
-
-        .empty {
-            padding: 55px 20px;
-            text-align: center;
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .empty-icon {
-            font-size: 35px;
-            margin-bottom: 10px;
-        }
-
-        /* =====================================
-           MODAL
-        ===================================== */
-
+        /* ===============================
+           MODALS
+        =============================== */
         .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(7, 59, 42, .55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 1000;
+            position:fixed;
+            inset:0;
+            background:rgba(7,59,42,.55);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            z-index:1000;
         }
-
-        .modal.show {
-            display: flex;
-        }
-
+        .modal.show { display:flex; }
         .modal-box {
-            width: min(560px, 100%);
-            max-height: 92vh;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 26px;
-            box-shadow: 0 18px 50px rgba(0,0,0,.2);
+            width:min(560px,100%);
+            max-height:92vh;
+            overflow-y:auto;
+            background:white;
+            border:1px solid var(--border);
+            border-radius:18px;
+            padding:26px;
+            box-shadow:0 18px 50px rgba(0,0,0,.2);
         }
-
-        .modal-box h3 {
-            color: var(--green);
-            font: 700 25px/1.1 "Playfair Display", Georgia, serif;
-            margin-bottom: 6px;
-        }
-
-        .modal-box > p {
-            color: var(--muted);
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
+        .modal-box h3 { color:var(--green); font:700 25px/1.1 "Playfair Display",Georgia,serif; margin-bottom:6px; }
+        .modal-box > p { color:var(--muted); font-size:13px; margin-bottom:20px; }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-group { margin-bottom:15px; }
         .form-group label {
-            display: block;
-            color: var(--green);
-            font-size: 11px;
-            font-weight: 800;
-            margin-bottom: 7px;
-            text-transform: uppercase;
-            letter-spacing: .4px;
+            display:block;
+            color:var(--green);
+            font-size:11px;
+            font-weight:800;
+            margin-bottom:7px;
+            text-transform:uppercase;
+            letter-spacing:.4px;
         }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            border: 1px solid #dccab4;
-            border-radius: 10px;
-            background: #fffaf3;
-            color: var(--text);
-            font: inherit;
-            font-size: 13px;
-            padding: 11px 12px;
-            outline: none;
+        .form-group input, .form-group textarea, .form-group select {
+            width:100%;
+            border:1px solid #dccab4;
+            border-radius:10px;
+            background:#fffaf3;
+            color:var(--text);
+            font:inherit;
+            font-size:13px;
+            padding:11px 12px;
+            outline:none;
         }
-
-        .form-group input,
-        .form-group select {
-            height: 44px;
+        .form-group input, .form-group select { height:44px; }
+        .form-group textarea { min-height:90px; resize:vertical; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color:var(--gold);
+            box-shadow:0 0 0 3px rgba(181,122,47,.1);
         }
-
-        .form-group textarea {
-            min-height: 90px;
-            resize: vertical;
+        .input-help { display:block; color:var(--muted); font-size:10px; margin-top:5px; line-height:1.4; }
+        .modal-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:18px; }
+        .cancel-btn, .save-btn {
+            height:42px;
+            padding:0 17px;
+            border:0;
+            border-radius:10px;
+            font-family:inherit;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
         }
+        .cancel-btn { background:#eee6da; color:#4d5751; }
+        .save-btn { background:var(--green); color:white; }
+        .save-btn:hover { background:var(--gold); }
 
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 0 3px rgba(181,122,47,.1);
+        @media (max-width:950px) {
+            .stats { grid-template-columns:repeat(2,1fr); }
+            .filter-form { grid-template-columns:1fr 1fr; }
         }
-
-        .input-help {
-            display: block;
-            color: var(--muted);
-            font-size: 10px;
-            margin-top: 5px;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 9px;
-            margin-top: 18px;
-        }
-
-        .cancel-btn,
-        .save-btn {
-            height: 42px;
-            padding: 0 17px;
-            border: 0;
-            border-radius: 10px;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        .cancel-btn {
-            background: #eee6da;
-            color: #4d5751;
-        }
-
-        .save-btn {
-            background: var(--green);
-            color: white;
-        }
-
-        .save-btn:hover {
-            background: var(--gold);
-        }
-
-        /* =====================================
-           RESPONSIVE
-        ===================================== */
-
-        @media (max-width: 1200px) {
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 950px) {
-            .admin-main {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            .filter-form {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        @media (max-width: 700px) {
-            .header-inner {
-                align-items: flex-start;
-            }
-
-            .header-links {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .header-link {
-                text-align: center;
-            }
-
-            .main {
-                padding-top: 28px;
-            }
-
-            .page-title {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .page-title h1 {
-                font-size: 31px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
-            .filter-form {
-                grid-template-columns: 1fr;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width:600px) {
+            .header-inner { align-items:flex-start; }
+            .header-links { flex-direction:column; align-items:stretch; }
+            .header-link { text-align:center; }
+            .main { padding-top:28px; }
+            .page-title { align-items:flex-start; flex-direction:column; }
+            .page-title h1 { font-size:31px; }
+            .stats { grid-template-columns:1fr; }
+            .filter-form { grid-template-columns:1fr; }
+            .form-row { grid-template-columns:1fr; }
         }
     </style>
 
@@ -1026,368 +760,136 @@ function medicine_json($value): string
 
 <body>
 
-<?php include 'sidebar.php'; ?>
-
-<main class="admin-main">
-
-    <header class="admin-header">
-        <div class="header-inner">
-
-            <div class="brand">
-                <div class="brand-icon">
-                    <img
-                        src="../assets/images/logo2.png"
-                        alt="Minguito Veterinary Clinic Logo"
-                    >
-                </div>
-
-                <div class="brand-text">
-                    <strong>Minguito Veterinary</strong>
-                    <span>Administration Panel</span>
-                </div>
+<header class="admin-header">
+    <div class="header-inner">
+        <div class="brand">
+            <div class="brand-icon">
+                <img src="../assets/images/logo2.png" alt="Minguito Veterinary Clinic Logo">
             </div>
-
-            <div class="header-links">
-                <a href="dashboard.php" class="header-link">
-                    Dashboard
-                </a>
-
-                <a href="../logout.php" class="header-link logout">
-                    Logout
-                </a>
+            <div class="brand-text">
+                <strong>Minguito Veterinary</strong>
+                <span>Administration Panel</span>
             </div>
-
         </div>
-    </header>
 
-    <main class="main">
+        <div class="header-links">
+            <a href="dashboard.php" class="header-link">Dashboard</a>
+            <a href="../logout.php" class="header-link logout">Logout</a>
+        </div>
+    </div>
+</header>
 
-        <div class="container">
+<main class="main">
+    <div class="container">
+        <section class="page-title">
+            <div>
+                <p class="section-label">Admin Panel</p>
+                <h1>Medicines</h1>
+                <p>Manage medicines, prices, and available stock for clinic payments.</p>
+            </div>
+            <button type="button" class="primary-btn" onclick="openAddModal()">+ Add Medicine</button>
+        </section>
 
-            <section class="page-title">
+        <?php if ($message !== ''): ?>
+            <div class="alert <?= $message_type === 'success' ? 'success' : 'error' ?>">
+                <?= htmlspecialchars($message) ?>
+            </div>
+        <?php endif; ?>
 
-                <div>
-                    <div class="section-label">
-                        Inventory Management
-                    </div>
+        <section class="stats">
+            <div class="stat"><div class="stat-label">Total Medicines</div><div class="stat-number"><?= $totalMedicines ?></div></div>
+            <div class="stat"><div class="stat-label">Active</div><div class="stat-number"><?= $activeMedicines ?></div></div>
+            <div class="stat"><div class="stat-label">Inactive</div><div class="stat-number"><?= $inactiveMedicines ?></div></div>
+            <div class="stat"><div class="stat-label"> Stock</div><div class="stat-number <?= $lowStockMedicines > 0 ? 'warning' : '' ?>"><?= $lowStockMedicines ?></div></div>
+        </section>
 
-                    <h1>Medicines</h1>
-
-                    <p>
-                        Manage medicines, prices, and available stock for clinic payments.
-                    </p>
+        <section class="filter-card">
+            <form method="GET" action="medicines.php" class="filter-form">
+                <div class="field">
+                    <label for="search">Search</label>
+                    <input type="text" id="search" name="search" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" placeholder="Medicine name or description...">
                 </div>
-
-                <button
-                    type="button"
-                    class="primary-btn"
-                    onclick="openAddModal()"
-                >
-                    + Add Medicine
-                </button>
-
-            </section>
-
-            <?php if ($message !== ''): ?>
-
-                <div class="alert <?= $message_type === 'success' ? 'success' : 'error' ?>">
-                    <?= htmlspecialchars($message) ?>
+                <div class="field">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active</option>
+                        <option value="Inactive" <?= $status_filter === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                    </select>
                 </div>
+                <button type="submit" class="filter-btn">Search</button>
+                <a href="medicines.php" class="clear-btn">Clear</a>
+            </form>
+        </section>
 
+        <section class="table-card">
+            <div class="table-header">
+                <h2>Medicine Records</h2>
+                <span class="result-count"><?= count($medicines) ?> result<?= count($medicines) === 1 ? '' : 's' ?></span>
+            </div>
+
+            <?php if (!empty($medicines)): ?>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>Medicine</th><th>Description</th><th>Unit Price</th><th>Stock</th><th>Status</th><th>Created</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>
+                        <?php foreach ($medicines as $medicine): ?>
+                            <?php
+                                $stock = (int)$medicine['stock'];
+                                if ($stock <= 0) {
+                                    $stockClass = 'stock-out';
+                                    $stockText = '0 / 6';
+                                    $stockNote = 'Restock Required';
+                                } elseif ($stock <= 5) {
+                                    $stockClass = 'stock-low';
+                                    $stockText = $stock . ' / 6';
+                                    $stockNote = 'Restock Suggested';
+                                } else {
+                                    $stockClass = 'stock-ok';
+                                    $stockText = $stock . ' / 6';
+                                    $stockNote = 'Stock Full';
+                                }
+                            ?>
+                            <tr>
+                                <td><span class="item-id">#<?= (int)$medicine['id'] ?></span></td>
+                                <td><div class="item-name"><?= htmlspecialchars($medicine['name']) ?></div></td>
+                                <td><div class="description"><?= htmlspecialchars($medicine['description'] ?: 'No description.') ?></div></td>
+                                <td><span class="price">₱<?= number_format((float)$medicine['price'], 2) ?></span></td>
+                                <td>
+                                    <span class="stock <?= $stockClass ?>"><?= htmlspecialchars($stockText) ?></span>
+                                    <span class="stock-note"><?= htmlspecialchars($stockNote) ?></span>
+                                </td>
+                                <td><span class="status <?= $medicine['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>"><?= htmlspecialchars($medicine['status']) ?></span></td>
+                                <td><?= date('M d, Y', strtotime($medicine['created_at'])) ?></td>
+                                <td>
+                                    <div class="actions">
+                                        <button type="button" class="action-btn edit-btn" onclick='openEditModal(
+                                            <?= (int)$medicine["id"] ?>,
+                                            <?= medicine_json($medicine["name"]) ?>,
+                                            <?= medicine_json($medicine["description"] ?? "") ?>,
+                                            <?= medicine_json((float)$medicine["price"]) ?>,
+                                            <?= (int)$medicine["stock"] ?>,
+                                            <?= medicine_json($medicine["status"]) ?>
+                                        )'>Edit</button>
+                                        <form method="POST" onsubmit="return confirm('Delete this medicine? This action cannot be undone.');">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="<?= (int)$medicine['id'] ?>">
+                                            <button type="submit" class="action-btn delete-btn">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="empty"><div class="empty-icon">💊</div><strong>No medicines found.</strong><br>Try another search or add a new medicine.</div>
             <?php endif; ?>
-
-            <section class="stats">
-
-                <article class="stat">
-                    <div class="stat-label">
-                        Total Medicines
-                    </div>
-
-                    <div class="stat-number">
-                        <?= $totalMedicines ?>
-                    </div>
-                </article>
-
-                <article class="stat">
-                    <div class="stat-label">
-                        Active
-                    </div>
-
-                    <div class="stat-number">
-                        <?= $activeMedicines ?>
-                    </div>
-                </article>
-
-                <article class="stat">
-                    <div class="stat-label">
-                        Inactive
-                    </div>
-
-                    <div class="stat-number">
-                        <?= $inactiveMedicines ?>
-                    </div>
-                </article>
-
-                <article class="stat">
-                    <div class="stat-label">
-                        Low Stock ≤ 5
-                    </div>
-
-                    <div class="stat-number <?= $lowStockMedicines > 0 ? 'warning' : '' ?>">
-                        <?= $lowStockMedicines ?>
-                    </div>
-                </article>
-
-            </section>
-
-            <section class="filter-card">
-
-                <form method="GET" action="medicines.php" class="filter-form">
-
-                    <div class="field">
-
-                        <label for="search">
-                            Search
-                        </label>
-
-                        <input
-                            type="text"
-                            id="search"
-                            name="search"
-                            value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>"
-                            placeholder="Medicine name or description..."
-                        >
-
-                    </div>
-
-                    <div class="field">
-
-                        <label for="status">
-                            Status
-                        </label>
-
-                        <select id="status" name="status">
-
-                            <option value="">
-                                All Statuses
-                            </option>
-
-                            <option
-                                value="Active"
-                                <?= $status_filter === 'Active' ? 'selected' : '' ?>
-                            >
-                                Active
-                            </option>
-
-                            <option
-                                value="Inactive"
-                                <?= $status_filter === 'Inactive' ? 'selected' : '' ?>
-                            >
-                                Inactive
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <button type="submit" class="filter-btn">
-                        Search
-                    </button>
-
-                    <a href="medicines.php" class="clear-btn">
-                        Clear
-                    </a>
-
-                </form>
-
-            </section>
-
-            <section class="table-card">
-
-                <div class="table-header">
-
-                    <h2>
-                        Medicine Records
-                    </h2>
-
-                    <span class="result-count">
-                        <?= count($medicines) ?>
-                        result<?= count($medicines) === 1 ? '' : 's' ?>
-                    </span>
-
-                </div>
-
-                <?php if (!empty($medicines)): ?>
-
-                    <div class="table-wrapper">
-
-                        <table>
-
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Medicine</th>
-                                    <th>Description</th>
-                                    <th>Unit Price</th>
-                                    <th>Stock</th>
-                                    <th>Status</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                                <?php foreach ($medicines as $medicine): ?>
-
-                                    <?php
-                                    $stock = (int)$medicine['stock'];
-
-                                    if ($stock <= 0) {
-                                        $stockClass = 'stock-out';
-                                        $stockText = 'Out of stock';
-                                        $stockNote = 'Needs restocking';
-                                    } elseif ($stock <= 5) {
-                                        $stockClass = 'stock-low';
-                                        $stockText = $stock;
-                                        $stockNote = 'Low stock';
-                                    } else {
-                                        $stockClass = 'stock-ok';
-                                        $stockText = $stock;
-                                        $stockNote = 'Available';
-                                    }
-                                    ?>
-
-                                    <tr>
-
-                                        <td>
-                                            <span class="medicine-id">
-                                                #<?= (int)$medicine['id'] ?>
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <div class="medicine-name">
-                                                <?= htmlspecialchars($medicine['name']) ?>
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                            <div class="description">
-                                                <?= htmlspecialchars(
-                                                    $medicine['description'] ?: 'No description.'
-                                                ) ?>
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                            <span class="price">
-                                                ₱<?= number_format((float)$medicine['price'], 2) ?>
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <span class="stock <?= $stockClass ?>">
-                                                <?= htmlspecialchars($stockText) ?>
-                                            </span>
-
-                                            <span class="stock-note">
-                                                <?= htmlspecialchars($stockNote) ?>
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <span class="status <?= $medicine['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>">
-                                                <?= htmlspecialchars($medicine['status']) ?>
-                                            </span>
-                                        </td>
-
-                                        <td>
-                                            <?= date('M d, Y', strtotime($medicine['created_at'])) ?>
-                                        </td>
-
-                                        <td>
-
-                                            <div class="actions">
-
-                                                <button
-                                                    type="button"
-                                                    class="action-btn edit-btn"
-                                                    onclick='openEditModal(
-                                                        <?= (int)$medicine["id"] ?>,
-                                                        <?= medicine_json($medicine["name"]) ?>,
-                                                        <?= medicine_json($medicine["description"] ?? "") ?>,
-                                                        <?= medicine_json((float)$medicine["price"]) ?>,
-                                                        <?= (int)$medicine["stock"] ?>,
-                                                        <?= medicine_json($medicine["status"]) ?>
-                                                    )'
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <form
-                                                    method="POST"
-                                                    style="display:inline;"
-                                                    onsubmit="return confirm('Delete this medicine? This action cannot be undone.');"
-                                                >
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="action"
-                                                        value="delete"
-                                                    >
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="id"
-                                                        value="<?= (int)$medicine['id'] ?>"
-                                                    >
-
-                                                    <button
-                                                        type="submit"
-                                                        class="action-btn delete-btn"
-                                                    >
-                                                        Delete
-                                                    </button>
-
-                                                </form>
-
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                <?php else: ?>
-
-                    <div class="empty">
-
-                        <div class="empty-icon">
-                            💊
-                        </div>
-
-                        <div>
-                            No medicines found.
-                        </div>
-
-                    </div>
-
-                <?php endif; ?>
-
-            </section>
-
-        </div>
-
-    </main>
-
+        </section>
+    </div>
 </main>
 
 <!-- ADD / EDIT MODAL -->
@@ -1486,13 +988,14 @@ function medicine_json($value): string
                         id="medicineStock"
                         name="stock"
                         min="0"
+                        max="6"
                         step="1"
                         required
-                        placeholder="e.g. 20"
+                        placeholder="0 to 6"
                     >
 
                     <span class="input-help">
-                        Enter the current available quantity.
+                        Maximum stock is 6. Enter 0 to 6.
                     </span>
 
                 </div>
@@ -1617,6 +1120,16 @@ function medicine_json($value): string
         medicineModal.classList.remove('show');
         medicineModal.setAttribute('aria-hidden', 'true');
     }
+
+
+    medicineForm.addEventListener('submit', function (event) {
+        const stock = parseInt(medicineStock.value, 10);
+        if (Number.isNaN(stock) || stock < 0 || stock > 6) {
+            event.preventDefault();
+            alert('Maximum stock is 6. Please enter a quantity from 0 to 6.');
+            medicineStock.focus();
+        }
+    });
 
     medicineModal.addEventListener('click', function (event) {
 

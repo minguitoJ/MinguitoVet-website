@@ -201,41 +201,59 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Services | Minguito Veterinary Clinic</title>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/sidebar.css">
+
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        :root {
+            --green: #073b2a;
+            --green-light: #174c3b;
+            --cream: #f8efe2;
+            --gold: #b57a2f;
+            --gold-light: #d4a15c;
+            --white: #ffffff;
+            --text: #17231e;
+            --muted: #66756e;
+            --border: #e6d7c2;
+            --success: #14633f;
+            --warning: #a66a16;
+            --danger: #a13d32;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { min-height: 100%; }
 
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: #f6f1e8;
-            color: #263b32;
             min-height: 100vh;
+            font-family: "DM Sans", Arial, sans-serif;
+            color: var(--text);
+            background: linear-gradient(135deg, #fbf4e9, #f4e6d2);
         }
 
+        /* ===============================
+           SHARED ADMIN HEADER
+        =============================== */
         .admin-header {
-            background: #173d32;
-            color: #fff;
-            padding: 18px 5%;
+            background: var(--green);
+            color: white;
+            padding: 18px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,.12);
+        }
+
+        .header-inner {
+            width: min(1180px, 92%);
+            margin: auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 18px rgba(23, 61, 50, .15);
         }
 
         .brand {
@@ -245,711 +263,511 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .brand-icon {
-            width: 48px;
-            height: 48px;
-            flex: 0 0 48px;
-            border-radius: 50%;
-            background: #d5aa5c;
+            width: 58px;
+            height: 58px;
+            flex: 0 0 58px;
+            border-radius: 14px;
+            background: #f8efe2;
+            border: 1px solid rgba(212,161,92,.35);
+            padding: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 4px;
             overflow: hidden;
-            box-shadow: 0 5px 14px rgba(0, 0, 0, .12);
+            box-shadow: 0 6px 16px rgba(0,0,0,.12);
         }
 
         .brand-icon img {
             width: 100%;
             height: 100%;
-            display: block;
             object-fit: contain;
-            border-radius: 50%;
+            display: block;
         }
 
-        .brand-text h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 20px;
-            line-height: 1.1;
+        .brand-text strong {
+            display: block;
+            font-size: 16px;
+            font-weight: 800;
         }
 
         .brand-text span {
             display: block;
-            font-size: 11px;
-            opacity: .75;
-            margin-top: 3px;
-            letter-spacing: .5px;
+            margin-top: 2px;
+            color: #d7e3dd;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
-        .header-right {
+        .header-links {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
         }
 
-        .admin-name {
-            font-size: 14px;
-            color: #f4ead8;
-        }
-
-        .logout-btn {
+        .header-link {
+            padding: 9px 14px;
+            border-radius: 9px;
+            color: white;
             text-decoration: none;
-            color: #173d32;
-            background: #d5aa5c;
-            padding: 9px 15px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 800;
+            transition: .2s ease;
         }
 
-        .page {
-            width: min(1250px, 92%);
-            margin: 38px auto 60px;
-        }
+        .header-link:hover { background: rgba(255,255,255,.1); }
+        .header-link.logout { background: var(--gold); }
+        .header-link.logout:hover { background: var(--gold-light); }
 
-        .page-heading {
+        /* ===============================
+           MAIN / PAGE TITLE
+        =============================== */
+        .main { padding: 40px 0 60px; }
+        .container { width: min(1180px, 92%); margin: auto; }
+
+        .page-title {
+            margin-bottom: 28px;
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
             gap: 20px;
-            margin-bottom: 25px;
         }
 
-        .eyebrow {
-            color: #a47b35;
-            font-size: 12px;
-            text-transform: uppercase;
+        .section-label {
+            color: var(--gold);
+            font-size: 11px;
+            font-weight: 800;
             letter-spacing: 1.8px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .page-heading h2 {
-            font-family: 'Playfair Display', serif;
-            color: #173d32;
-            font-size: 34px;
-        }
-
-        .page-heading p {
-            color: #6c756f;
-            margin-top: 6px;
-            font-size: 14px;
-        }
-
-        .add-btn {
-            border: 0;
-            cursor: pointer;
-            background: #173d32;
-            color: #fff;
-            padding: 12px 18px;
-            border-radius: 9px;
-            font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 5px 15px rgba(23, 61, 50, .18);
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 17px;
-            margin-bottom: 22px;
-        }
-
-        .stat-card {
-            background: #fff;
-            border: 1px solid #e9dfcf;
-            border-radius: 14px;
-            padding: 19px 21px;
-            box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
-        }
-
-        .stat-label {
-            color: #7b817c;
-            font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: .8px;
-            font-weight: 700;
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            color: #173d32;
-            margin-top: 5px;
-        }
-
-        .success,
-        .error {
-            padding: 13px 16px;
-            border-radius: 9px;
-            margin-bottom: 18px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .success {
-            background: #e7f3eb;
-            color: #22613d;
-            border: 1px solid #bcdcc8;
-        }
-
-        .error {
-            background: #fbe9e7;
-            color: #a33a30;
-            border: 1px solid #efc1bc;
-        }
-
-        .filters {
-            background: #fff;
-            border: 1px solid #e9dfcf;
-            border-radius: 14px;
-            padding: 16px;
-            display: flex;
-            gap: 10px;
-            margin-bottom: 18px;
-            box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
-        }
-
-        .filters input,
-        .filters select {
-            border: 1px solid #dcd2c2;
-            background: #fcfaf6;
-            color: #263b32;
-            padding: 11px 12px;
-            border-radius: 8px;
-            font-family: inherit;
-            outline: none;
-        }
-
-        .filters input {
-            flex: 1;
-            min-width: 180px;
-        }
-
-        .filters input:focus,
-        .filters select:focus {
-            border-color: #a47b35;
-        }
-
-        .filter-btn,
-        .clear-btn {
-            border: 0;
-            padding: 11px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 700;
-            text-decoration: none;
-            font-size: 13px;
-        }
-
-        .filter-btn {
-            background: #173d32;
-            color: #fff;
-        }
-
-        .clear-btn {
-            background: #eee7dc;
-            color: #46544d;
-        }
-
-        .table-card {
-            background: #fff;
-            border: 1px solid #e9dfcf;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 850px;
-        }
-
-        th {
-            background: #f1e8d9;
-            color: #496055;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: .8px;
-            text-align: left;
-            padding: 14px 16px;
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 15px 16px;
-            border-top: 1px solid #eee8de;
-            vertical-align: middle;
-            font-size: 14px;
-        }
-
-        tr:hover td {
-            background: #fcfaf6;
-        }
-
-        .service-name {
-            font-weight: 700;
-            color: #173d32;
-        }
-
-        .description {
-            max-width: 390px;
-            color: #6f7772;
-            line-height: 1.5;
-        }
-
-        .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .status::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .status-active {
-            background: #e6f3e9;
-            color: #2b7748;
-        }
-
-        .status-inactive {
-            background: #eeeae5;
-            color: #77736d;
-        }
-
-        .actions {
-            display: flex;
-            gap: 7px;
-            white-space: nowrap;
-        }
-
-        .action-btn {
-            border: 0;
-            cursor: pointer;
-            border-radius: 7px;
-            padding: 8px 11px;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .edit-btn {
-            background: #f2e7cf;
-            color: #806025;
-        }
-
-        .delete-btn {
-            background: #f8e3e0;
-            color: #a23b32;
-        }
-
-        .empty {
-            padding: 50px 20px;
-            text-align: center;
-            color: #7b817c;
-        }
-
-        .empty-icon {
-            font-size: 35px;
-            margin-bottom: 10px;
-        }
-
-        /* MODAL */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 35, 28, .55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 1000;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-box {
-            width: min(520px, 100%);
-            background: #fff;
-            border-radius: 16px;
-            padding: 26px;
-            box-shadow: 0 18px 50px rgba(0, 0, 0, .2);
-        }
-
-        .modal-box h3 {
-            font-family: 'Playfair Display', serif;
-            color: #173d32;
-            font-size: 25px;
-            margin-bottom: 5px;
-        }
-
-        .modal-box > p {
-            color: #777;
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #41544b;
-            font-size: 12px;
-            font-weight: 700;
             margin-bottom: 7px;
         }
 
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
+        .page-title h1 {
+            color: var(--green);
+            font: 700 36px/1.1 "Playfair Display", Georgia, serif;
+            margin-bottom: 8px;
+        }
+
+        .page-title p { color: var(--muted); font-size: 14px; }
+
+        .primary-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 42px;
+            padding: 0 17px;
+            border: 0;
+            border-radius: 10px;
+            background: var(--green);
+            color: white;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(7,59,42,.14);
+            white-space: nowrap;
+        }
+
+        .primary-btn:hover { background: var(--gold); }
+
+        /* ===============================
+           ALERTS
+        =============================== */
+        .alert {
+            padding: 13px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .alert.success { background:#e7f3e9; color:#387346; border:1px solid #c8e1ce; }
+        .alert.error { background:#f8e7e5; color:#a13c32; border:1px solid #ecc5c0; }
+
+        /* ===============================
+           STAT CARDS
+        =============================== */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        .stat {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 19px;
+            box-shadow: 0 10px 28px rgba(7,59,42,.07);
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-number { color: var(--green); font-size: 28px; font-weight: 800; }
+        .stat-number.warning { color: var(--warning); }
+
+        /* ===============================
+           FILTER BOX
+        =============================== */
+        .filter-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 10px 28px rgba(7,59,42,.07);
+            margin-bottom: 22px;
+        }
+
+        .filter-form {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr auto auto;
+            gap: 11px;
+            align-items: end;
+        }
+
+        .field label {
+            display: block;
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 7px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+        }
+
+        .field input, .field select {
             width: 100%;
-            border: 1px solid #dcd2c2;
-            background: #fcfaf6;
-            border-radius: 8px;
-            padding: 11px 12px;
-            font-family: inherit;
-            color: #263b32;
+            height: 44px;
+            padding: 0 12px;
+            border: 1px solid #dccab4;
+            border-radius: 10px;
+            background: #fffaf3;
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
             outline: none;
         }
 
-        .form-group textarea {
-            min-height: 105px;
-            resize: vertical;
+        .field input:focus, .field select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(181,122,47,.1);
         }
 
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: #a47b35;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 9px;
-            margin-top: 20px;
-        }
-
-        .cancel-btn,
-        .save-btn {
-            border: 0;
-            border-radius: 8px;
-            padding: 11px 17px;
+        .filter-btn, .clear-btn {
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 800;
             cursor: pointer;
-            font-family: inherit;
-            font-weight: 700;
+            text-decoration: none;
         }
 
-        .cancel-btn {
-            background: #eee7dc;
-            color: #4d5751;
+        .filter-btn { border:0; background:var(--green); color:white; }
+        .filter-btn:hover { background:var(--gold); }
+        .clear-btn { border:1px solid var(--border); background:white; color:var(--green); }
+        .clear-btn:hover { background:var(--cream); }
+
+        /* ===============================
+           TABLE
+        =============================== */
+        .table-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 28px rgba(7,59,42,.07);
         }
 
-        .save-btn {
-            background: #173d32;
-            color: #fff;
+        .table-header {
+            padding: 19px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
         }
 
-        @media (max-width: 760px) {
-            .admin-header {
-                padding: 14px 4%;
-            }
+        .table-header h2 { color:var(--green); font-size:18px; font-weight:800; }
+        .result-count { color:var(--muted); font-size:12px; }
+        .table-wrapper { overflow-x:auto; }
 
-            .admin-name {
-                display: none;
-            }
+        table { width:100%; border-collapse:collapse; min-width:980px; }
 
-            .page {
-                width: 94%;
-                margin-top: 25px;
-            }
+        th {
+            padding:14px 16px;
+            background:#fcf7ef;
+            color:var(--muted);
+            text-align:left;
+            font-size:10px;
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.6px;
+            white-space:nowrap;
+        }
 
-            .page-heading {
-                align-items: flex-start;
-                flex-direction: column;
-            }
+        td {
+            padding:15px 16px;
+            border-top:1px solid #eee3d4;
+            font-size:12px;
+            vertical-align:middle;
+        }
 
-            .page-heading h2 {
-                font-size: 29px;
-            }
+        tbody tr:hover { background:#fffbf5; }
 
-            .stats {
-                grid-template-columns: 1fr;
-            }
+        .item-id { color:var(--muted); font-weight:700; }
+        .item-name { color:var(--green); font-size:14px; font-weight:800; }
+        .description { max-width:390px; color:var(--muted); line-height:1.45; }
+        .price { color:var(--green); font-weight:800; white-space:nowrap; }
 
-            .filters {
-                flex-direction: column;
-            }
+        .status {
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:6px 10px;
+            border-radius:30px;
+            font-size:10px;
+            font-weight:800;
+        }
 
-            .filters input,
-            .filters select {
-                width: 100%;
-            }
+        .status::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+        .status-active { background:#e5f2e8; color:#2b7748; }
+        .status-inactive { background:#eeeae5; color:#77736d; }
+
+        .stock { font-weight:800; white-space:nowrap; }
+        .stock-ok { color:var(--success); }
+        .stock-low { color:var(--warning); }
+        .stock-out { color:var(--danger); }
+        .stock-note { display:block; margin-top:3px; color:var(--muted); font-size:10px; font-weight:500; }
+
+        .actions { display:flex; align-items:center; gap:7px; white-space:nowrap; }
+        .action-btn {
+            height:34px;
+            padding:0 10px;
+            border:0;
+            border-radius:8px;
+            font-family:inherit;
+            font-size:10px;
+            font-weight:800;
+            cursor:pointer;
+        }
+        .edit-btn { background:#f2e7cf; color:#806025; }
+        .delete-btn { background:#f8e3e0; color:var(--danger); }
+        .edit-btn:hover, .delete-btn:hover { filter:brightness(.97); }
+
+        .empty { padding:55px 20px; text-align:center; color:var(--muted); font-size:14px; }
+        .empty-icon { font-size:35px; margin-bottom:10px; }
+
+        /* ===============================
+           MODALS
+        =============================== */
+        .modal {
+            position:fixed;
+            inset:0;
+            background:rgba(7,59,42,.55);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            z-index:1000;
+        }
+        .modal.show { display:flex; }
+        .modal-box {
+            width:min(560px,100%);
+            max-height:92vh;
+            overflow-y:auto;
+            background:white;
+            border:1px solid var(--border);
+            border-radius:18px;
+            padding:26px;
+            box-shadow:0 18px 50px rgba(0,0,0,.2);
+        }
+        .modal-box h3 { color:var(--green); font:700 25px/1.1 "Playfair Display",Georgia,serif; margin-bottom:6px; }
+        .modal-box > p { color:var(--muted); font-size:13px; margin-bottom:20px; }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-group { margin-bottom:15px; }
+        .form-group label {
+            display:block;
+            color:var(--green);
+            font-size:11px;
+            font-weight:800;
+            margin-bottom:7px;
+            text-transform:uppercase;
+            letter-spacing:.4px;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width:100%;
+            border:1px solid #dccab4;
+            border-radius:10px;
+            background:#fffaf3;
+            color:var(--text);
+            font:inherit;
+            font-size:13px;
+            padding:11px 12px;
+            outline:none;
+        }
+        .form-group input, .form-group select { height:44px; }
+        .form-group textarea { min-height:90px; resize:vertical; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color:var(--gold);
+            box-shadow:0 0 0 3px rgba(181,122,47,.1);
+        }
+        .input-help { display:block; color:var(--muted); font-size:10px; margin-top:5px; line-height:1.4; }
+        .modal-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:18px; }
+        .cancel-btn, .save-btn {
+            height:42px;
+            padding:0 17px;
+            border:0;
+            border-radius:10px;
+            font-family:inherit;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
+        }
+        .cancel-btn { background:#eee6da; color:#4d5751; }
+        .save-btn { background:var(--green); color:white; }
+        .save-btn:hover { background:var(--gold); }
+
+        @media (max-width:950px) {
+            .stats { grid-template-columns:repeat(2,1fr); }
+            .filter-form { grid-template-columns:1fr 1fr; }
+        }
+        @media (max-width:600px) {
+            .header-inner { align-items:flex-start; }
+            .header-links { flex-direction:column; align-items:stretch; }
+            .header-link { text-align:center; }
+            .main { padding-top:28px; }
+            .page-title { align-items:flex-start; flex-direction:column; }
+            .page-title h1 { font-size:31px; }
+            .stats { grid-template-columns:1fr; }
+            .filter-form { grid-template-columns:1fr; }
+            .form-row { grid-template-columns:1fr; }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-
-<style>
-/* =========================================================
-   SERVICES PAGE - CLEAN SHARED SIDEBAR LAYOUT
-   ========================================================= */
-
-html,
-body {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 100%;
-    width: 100%;
-}
-
-body {
-    background: #f6f1e8;
-    color: #263b32;
-}
-
-.admin-main {
-    margin-left: 270px;
-    width: calc(100% - 270px);
-    min-height: 100vh;
-    box-sizing: border-box;
-}
-
-.admin-main .admin-header {
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.admin-main .page {
-    width: 100%;
-    max-width: 1250px;
-    margin: 38px auto 60px;
-    padding: 0 34px;
-    box-sizing: border-box;
-}
-
-.admin-main .page * {
-    box-sizing: border-box;
-}
-
-@media (max-width: 980px) {
-    .admin-main {
-        margin-left: 0;
-        width: 100%;
-    }
-
-    .admin-main .page {
-        max-width: none;
-        margin: 25px auto 45px;
-        padding: 0 20px;
-    }
-}
-
-@media (max-width: 760px) {
-    .admin-main .page {
-        padding: 0 18px;
-    }
-}
-</style>
 
 </head>
 <body>
-<?php include 'sidebar.php'; ?>
 
-<main class="admin-main">
 <header class="admin-header">
-    <div class="brand">
-        <div class="brand-icon">
-            <img
-                src="../assets/images/logo2.png"
-                alt="Minguito Veterinary Clinic Logo"
-            >
+    <div class="header-inner">
+        <div class="brand">
+            <div class="brand-icon">
+                <img src="../assets/images/logo2.png" alt="Minguito Veterinary Clinic Logo">
+            </div>
+            <div class="brand-text">
+                <strong>Minguito Veterinary</strong>
+                <span>Administration Panel</span>
+            </div>
         </div>
-        <div class="brand-text">
-            <h1>Minguito Veterinary</h1>
-            <span>ADMINISTRATION PANEL</span>
+
+        <div class="header-links">
+            <a href="dashboard.php" class="header-link">Dashboard</a>
+            <a href="../logout.php" class="header-link logout">Logout</a>
         </div>
-    </div>
-
-    <div class="header-right">
-        <span class="admin-name">
-            Welcome, <?= htmlspecialchars($adminUsername) ?>
-        </span>
-
-        <a href="../logout.php" class="logout-btn">Logout</a>
     </div>
 </header>
 
-<main class="page admin-content">
+<main class="main">
+    <div class="container">
+        <section class="page-title">
+            <div>
+                <p class="section-label">Admin Panel</p>
+                <h1>Services</h1>
+                <p>Manage the veterinary services available to your customers.</p>
+            </div>
+            <button type="button" class="primary-btn" onclick="openAddModal()">+ Add Service</button>
+        </section>
 
-    <div class="page-heading">
-        <div>
-            <div class="eyebrow">Clinic Management</div>
-            <h2>Services</h2>
-            <p>Manage the veterinary services available to your customers.</p>
-        </div>
-
-        <button type="button" class="add-btn" onclick="openAddModal()">
-            + Add Service
-        </button>
-    </div>
-
-    <?php if ($message !== ''): ?>
-        <div class="<?= $message_type === 'success' ? 'success' : 'error' ?>">
-            <?= htmlspecialchars($message) ?>
-        </div>
-    <?php endif; ?>
-
-    <section class="stats">
-        <div class="stat-card">
-            <div class="stat-label">Total Services</div>
-            <div class="stat-number"><?= $totalServices ?></div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-label">Active Services</div>
-            <div class="stat-number"><?= $activeServices ?></div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-label">Inactive Services</div>
-            <div class="stat-number"><?= $inactiveServices ?></div>
-        </div>
-    </section>
-
-    <form class="filters" method="GET">
-        <input
-            type="text"
-            name="search"
-            value="<?= htmlspecialchars($search) ?>"
-            placeholder="Search service name or description..."
-        >
-
-        <select name="status">
-            <option value="">All Status</option>
-            <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active</option>
-            <option value="Inactive" <?= $status_filter === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
-        </select>
-
-        <button type="submit" class="filter-btn">Search</button>
-
-        <?php if ($search !== '' || $status_filter !== ''): ?>
-            <a href="services.php" class="clear-btn">Clear</a>
+        <?php if ($message !== ''): ?>
+            <div class="alert <?= $message_type === 'success' ? 'success' : 'error' ?>">
+                <?= htmlspecialchars($message) ?>
+            </div>
         <?php endif; ?>
-    </form>
 
-    <section class="table-card">
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Service</th>
-                        <th>Description</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+        <section class="stats">
+            <div class="stat"><div class="stat-label">Total Services</div><div class="stat-number"><?= $totalServices ?></div></div>
+            <div class="stat"><div class="stat-label">Active Services</div><div class="stat-number"><?= $activeServices ?></div></div>
+            <div class="stat"><div class="stat-label">Inactive Services</div><div class="stat-number"><?= $inactiveServices ?></div></div>
+            <div class="stat"><div class="stat-label">Service Status</div><div class="stat-number">Manage</div></div>
+        </section>
 
-                <tbody>
-                <?php if (empty($services)): ?>
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty">
-                                <div class="empty-icon">🐾</div>
-                                <strong>No services found.</strong>
-                                <p>Try another search or add a new service.</p>
-                            </div>
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($services as $service): ?>
-                        <tr>
-                            <td>#<?= (int)$service['id'] ?></td>
+        <section class="filter-card">
+            <form method="GET" action="services.php" class="filter-form">
+                <div class="field">
+                    <label for="search">Search</label>
+                    <input type="text" id="search" name="search" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" placeholder="Service name or description...">
+                </div>
+                <div class="field">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active</option>
+                        <option value="Inactive" <?= $status_filter === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="filter-btn">Search</button>
+                <a href="services.php" class="clear-btn">Clear</a>
+            </form>
+        </section>
 
-                            <td>
-                                <div class="service-name">
-                                    <?= htmlspecialchars($service['name']) ?>
-                                </div>
-                            </td>
+        <section class="table-card">
+            <div class="table-header">
+                <h2>Service Records</h2>
+                <span class="result-count"><?= count($services) ?> result<?= count($services) === 1 ? '' : 's' ?></span>
+            </div>
 
-                            <td>
-                                <div class="description">
-                                    <?= $service['description']
-                                        ? htmlspecialchars($service['description'])
-                                        : '<span style="color:#aaa;">No description</span>' ?>
-                                </div>
-                            </td>
-
-                            <td>
-                                <strong style="color:#173d32;">
-                                    ₱<?= number_format((float)$service['price'], 2) ?>
-                                </strong>
-                            </td>
-
-                            <td>                                <span class="status <?= $service['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>">
-                                    <?= htmlspecialchars($service['status']) ?>
-                                </span>
-                            </td>
-
-                            <td>
-                                <?= date('M d, Y', strtotime($service['created_at'])) ?>
-                            </td>
-
-                            <td>
-                                <div class="actions">
-                                    <button
-                                        type="button"
-                                        class="action-btn edit-btn"
-                                        onclick='openEditModal(
+            <?php if (!empty($services)): ?>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>Service</th><th>Description</th><th>Price</th><th>Status</th><th>Created</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>
+                        <?php foreach ($services as $service): ?>
+                            <tr>
+                                <td><span class="item-id">#<?= (int)$service['id'] ?></span></td>
+                                <td><div class="item-name"><?= htmlspecialchars($service['name']) ?></div></td>
+                                <td><div class="description"><?= $service['description'] ? htmlspecialchars($service['description']) : 'No description.' ?></div></td>
+                                <td><span class="price">₱<?= number_format((float)$service['price'], 2) ?></span></td>
+                                <td><span class="status <?= $service['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>"><?= htmlspecialchars($service['status']) ?></span></td>
+                                <td><?= date('M d, Y', strtotime($service['created_at'])) ?></td>
+                                <td>
+                                    <div class="actions">
+                                        <button type="button" class="action-btn edit-btn" onclick='openEditModal(
                                             <?= (int)$service["id"] ?>,
                                             <?= json_encode($service["name"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
                                             <?= json_encode($service["description"] ?? "", JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
                                             <?= json_encode((float)$service["price"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>,
                                             <?= json_encode($service["status"], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>
-                                        )'
-                                    >
-                                        Edit
-                                    </button>
-
-                                    <form method="POST" onsubmit="return confirmDelete('<?= htmlspecialchars(addslashes($service['name'])) ?>');">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="<?= (int)$service['id'] ?>">
-                                        <button type="submit" class="action-btn delete-btn">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-</main>
+                                        )'>Edit</button>
+                                        <form method="POST" onsubmit="return confirmDelete('<?= htmlspecialchars(addslashes($service['name'])) ?>');">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="<?= (int)$service['id'] ?>">
+                                            <button type="submit" class="action-btn delete-btn">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="empty"><div class="empty-icon">🐾</div><strong>No services found.</strong><br>Try another search or add a new service.</div>
+            <?php endif; ?>
+        </section>
+    </div>
 </main>
 
 <!-- ADD / EDIT MODAL -->

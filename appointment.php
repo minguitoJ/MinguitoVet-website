@@ -42,23 +42,58 @@ $pageTitle = 'Book an Appointment';
 
 $today = date('Y-m-d');
 
-$selectedService = isset($_GET['service'])
-    ? trim($_GET['service'])
-    : '';
+$selectedServices = [];
 
-$services = [
-    'General Checkup',
-    'Vaccination',
-    'Preventive Care',
-    'Dental Care',
-    'Surgery & Treatment',
-    'Laboratory & Diagnostics',
-    'Grooming & Wellness'
-];
+if (isset($_GET['services']) && is_array($_GET['services'])) {
+    $selectedServices = array_values(array_filter(
+        array_map('trim', $_GET['services']),
+        static fn($service) => $service !== ''
+    ));
+} elseif (isset($_GET['service'])) {
+    $legacyService = trim((string)$_GET['service']);
 
-if (!in_array($selectedService, $services, true)) {
-    $selectedService = '';
+    if ($legacyService !== '') {
+        $selectedServices = [$legacyService];
+    }
 }
+
+/*
+|--------------------------------------------------------------------------
+| ACTIVE VETERINARY SERVICES
+|--------------------------------------------------------------------------
+| Services are loaded directly from the Services table.
+| Only Active services are displayed to customers.
+*/
+$services = [];
+
+try {
+    $serviceListStmt = $pdo->query("
+        SELECT id, name, price
+        FROM services
+        WHERE status = 'Active'
+        ORDER BY name ASC
+    ");
+
+    $services = $serviceListStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log(
+        'Minguito appointment services load error: ' .
+        $e->getMessage()
+    );
+
+    $services = [];
+}
+
+$activeServiceNames = array_map(
+    static fn($service) => trim((string)$service['name']),
+    $services
+);
+
+$selectedServices = array_values(array_filter(
+    $selectedServices,
+    static fn($service) =>
+        in_array($service, $activeServiceNames, true)
+));
 
 
 /*
@@ -469,6 +504,127 @@ include 'includes/navbar.php';
 
 
 /* =========================================================
+   MULTIPLE VETERINARY SERVICES
+========================================================= */
+
+.appointment-page .service-help {
+    margin: -5px 0 11px 2px;
+    color: #718078;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.appointment-page .service-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+}
+
+.appointment-page .service-option {
+    position: relative;
+}
+
+.appointment-page .service-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.appointment-page .service-option label {
+    min-height: 66px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border: 1.5px solid #d49a52;
+    border-radius: 11px;
+    background: rgba(255, 250, 242, 0.58);
+    color: #174f42;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.appointment-page .service-option label:hover {
+    border-color: #064b3b;
+    background: #fffaf2;
+    transform: translateY(-1px);
+}
+
+.appointment-page .service-option input[type="checkbox"]:checked + label {
+    border-color: #064b3b;
+    background: #eaf4ed;
+    box-shadow: 0 0 0 3px rgba(6, 75, 59, .08);
+}
+
+.appointment-page .service-option input[type="checkbox"]:checked + label::before {
+    content: "✓";
+    order: 2;
+    flex: 0 0 25px;
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #064b3b;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.appointment-page .service-option .service-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.appointment-page .service-option .service-price {
+    display: block;
+    margin-top: 4px;
+    color: #be7e26;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.appointment-page .service-summary {
+    margin-top: 13px;
+    padding: 13px 15px;
+    border: 1px solid rgba(6, 75, 59, .10);
+    border-radius: 12px;
+    background: #f8f1e5;
+    color: #53685f;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.appointment-page .service-summary strong {
+    color: #064b3b;
+}
+
+.appointment-page .service-summary-total {
+    float: right;
+    color: #be7e26;
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.appointment-page .service-selection-error {
+    display: none;
+    margin-top: 9px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: #fff1ee;
+    border: 1px solid #efc4be;
+    color: #a13d32;
+    font-size: 12px;
+}
+
+.appointment-page .service-selection-error.show {
+    display: block;
+}
+
+/* =========================================================
    BOOK BUTTON
 ========================================================= */
 
@@ -575,6 +731,10 @@ include 'includes/navbar.php';
 
 
 @media (max-width: 620px) {
+
+    .appointment-page .service-checkboxes {
+        grid-template-columns: 1fr;
+    }
 
     .appointment-page {
         padding: 40px 0 58px;
@@ -937,77 +1097,98 @@ include 'includes/navbar.php';
 
 
 
-                <!-- SERVICE -->
+                <!-- MULTIPLE VETERINARY SERVICES -->
 
-                <div class="form-group">
+                <div class="form-group service-selection-group">
 
-                    <label for="service">
-                        Veterinary Service
+                    <label>
+                        Veterinary Services
                     </label>
 
-                    <div class="input-wrap">
-<select
-                            id="service"
-                            name="service"
-                            required>
+                    <p class="service-help">
+                        Select one or more services for your pet.
+                    </p>
 
-                            <option
-                                value=""
-                                disabled
-                                hidden
-                                <?= $selectedService === '' ? 'selected' : '' ?>>
-                                Select a service
-                            </option>
+                    <div class="service-checkboxes">
 
-                            <option
-                                value="General Checkup"
-                                <?= $selectedService === 'General Checkup' ? 'selected' : '' ?>>
-                                General Checkup
-                            </option>
+                        <?php foreach ($services as $serviceOption): ?>
 
-                            <option
-                                value="Vaccination"
-                                <?= $selectedService === 'Vaccination' ? 'selected' : '' ?>>
-                                Vaccination
-                            </option>
+                            <?php
+                            $serviceName =
+                                trim((string)$serviceOption['name']);
 
-                            <option
-                                value="Preventive Care"
-                                <?= $selectedService === 'Preventive Care' ? 'selected' : '' ?>>
-                                Preventive Care
-                            </option>
+                            $servicePrice =
+                                (float)$serviceOption['price'];
 
-                            <option
-                                value="Dental Care"
-                                <?= $selectedService === 'Dental Care' ? 'selected' : '' ?>>
-                                Dental Care
-                            </option>
+                            $serviceChecked =
+                                in_array(
+                                    $serviceName,
+                                    $selectedServices,
+                                    true
+                                );
+                            ?>
 
-                            <option
-                                value="Surgery & Treatment"
-                                <?= $selectedService === 'Surgery & Treatment' ? 'selected' : '' ?>>
-                                Surgery &amp; Treatment
-                            </option>
+                            <div class="service-option">
 
-                            <option
-                                value="Laboratory & Diagnostics"
-                                <?= $selectedService === 'Laboratory & Diagnostics' ? 'selected' : '' ?>>
-                                Laboratory &amp; Diagnostics
-                            </option>
+                                <input
+                                    type="checkbox"
+                                    id="service_<?= (int)$serviceOption['id'] ?>"
+                                    name="services[]"
+                                    value="<?= htmlspecialchars($serviceName, ENT_QUOTES, 'UTF-8') ?>"
+                                    data-price="<?= htmlspecialchars(number_format($servicePrice, 2, '.', ''), ENT_QUOTES, 'UTF-8') ?>"
+                                    <?= $serviceChecked ? 'checked' : '' ?>
+                                >
 
-                            <option
-                                value="Grooming & Wellness"
-                                <?= $selectedService === 'Grooming & Wellness' ? 'selected' : '' ?>>
-                                Grooming &amp; Wellness
-                            </option>
+                                <label for="service_<?= (int)$serviceOption['id'] ?>">
 
-                        </select>
+                                    <span>
+                                        <span class="service-name">
+                                            <?= htmlspecialchars($serviceName, ENT_QUOTES, 'UTF-8') ?>
+                                        </span>
+
+                                        <span class="service-price">
+                                            ₱<?= number_format($servicePrice, 2) ?>
+                                        </span>
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        <?php endforeach; ?>
 
                     </div>
 
+                    <?php if (empty($services)): ?>
+
+                        <div class="service-selection-error show">
+                            No active veterinary services are currently available.
+                            Please contact the clinic administrator.
+                        </div>
+
+                    <?php endif; ?>
+
+                    <div class="service-summary" id="serviceSummary">
+
+                        <strong id="serviceSummaryText">
+                            No service selected
+                        </strong>
+
+                        <span
+                            class="service-summary-total"
+                            id="serviceSummaryTotal">
+                            ₱0.00
+                        </span>
+
+                    </div>
+
+                    <div
+                        class="service-selection-error"
+                        id="serviceSelectionError">
+                        Please select at least one veterinary service.
+                    </div>
+
                 </div>
-
-
 
                 <!-- DATE + TIME -->
 
@@ -1123,6 +1304,102 @@ document.addEventListener('DOMContentLoaded', function () {
             JSON_UNESCAPED_SLASHES
         ) ?>;
 
+    const serviceCheckboxes = Array.from(
+        document.querySelectorAll(
+            '.service-selection-group input[name="services[]"]'
+        )
+    );
+
+    const serviceSummaryText =
+        document.getElementById('serviceSummaryText');
+
+    const serviceSummaryTotal =
+        document.getElementById('serviceSummaryTotal');
+
+    const serviceSelectionError =
+        document.getElementById('serviceSelectionError');
+
+    function updateServiceSummary() {
+
+        const selected =
+            serviceCheckboxes.filter(
+                checkbox => checkbox.checked
+            );
+
+        const names = selected.map(
+            checkbox => {
+
+                const label =
+                    document.querySelector(
+                        'label[for="' +
+                        checkbox.id +
+                        '"] .service-name'
+                    );
+
+                return label
+                    ? label.textContent.trim()
+                    : checkbox.value;
+            }
+        );
+
+        const total = selected.reduce(
+            (sum, checkbox) => {
+                return sum +
+                    parseFloat(
+                        checkbox.dataset.price || '0'
+                    );
+            },
+            0
+        );
+
+        if (serviceSummaryText) {
+
+            if (names.length === 0) {
+                serviceSummaryText.textContent =
+                    'No service selected';
+            } else if (names.length === 1) {
+                serviceSummaryText.textContent =
+                    'Selected: ' + names[0];
+            } else {
+                serviceSummaryText.textContent =
+                    'Selected: ' +
+                    names.length +
+                    ' services';
+            }
+        }
+
+        if (serviceSummaryTotal) {
+            serviceSummaryTotal.textContent =
+                '₱' +
+                total.toLocaleString(
+                    'en-PH',
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                );
+        }
+
+        if (serviceSelectionError) {
+            serviceSelectionError.classList.toggle(
+                'show',
+                selected.length === 0
+            );
+        }
+    }
+
+    serviceCheckboxes.forEach(
+        checkbox => {
+            checkbox.addEventListener(
+                'change',
+                updateServiceSummary
+            );
+        }
+    );
+
+    updateServiceSummary();
+
+
 
 
     /* =====================================================
@@ -1236,6 +1513,26 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener(
             'submit',
             function (event) {
+
+                const selectedServices =
+                    serviceCheckboxes.filter(
+                        checkbox => checkbox.checked
+                    );
+
+                if (selectedServices.length === 0) {
+
+                    event.preventDefault();
+
+                    if (serviceSelectionError) {
+                        serviceSelectionError.classList.add('show');
+                    }
+
+                    if (serviceCheckboxes[0]) {
+                        serviceCheckboxes[0].focus();
+                    }
+
+                    return;
+                }
 
                 if (
                     !dateInput.value ||

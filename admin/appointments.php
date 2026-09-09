@@ -16,6 +16,23 @@ $search = trim($_GET['search'] ?? '');
 $statusFilter = trim($_GET['status'] ?? '');
 $dateFilter = trim($_GET['date'] ?? '');
 
+/*
+ * Appointment display choices
+ *
+ * teacher_latest  = newest booking/record first (teacher's requirement)
+ * upcoming        = original appointment view: nearest date/time first
+ */
+$sort = trim($_GET['sort'] ?? 'teacher_latest');
+
+$allowedSorts = [
+    'teacher_latest',
+    'upcoming'
+];
+
+if (!in_array($sort, $allowedSorts, true)) {
+    $sort = 'teacher_latest';
+}
+
 
 // =====================================
 // UPDATE APPOINTMENT STATUS
@@ -142,6 +159,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $query['date'] = $dateFilter;
     }
 
+    if ($sort !== 'teacher_latest') {
+        $query['sort'] = $sort;
+    }
+
     $redirectUrl = 'appointments.php';
 
     if (!empty($query)) {
@@ -231,12 +252,29 @@ if ($dateFilter !== '') {
 
 
 // Order
-$sql .= "
-    ORDER BY
-        a.appointment_date ASC,
-        a.appointment_time ASC,
-        a.id ASC
-";
+switch ($sort) {
+    case 'upcoming':
+        // Nearest scheduled appointment first.
+        $sql .= "
+            ORDER BY
+                a.appointment_date ASC,
+                a.appointment_time ASC,
+                a.id DESC
+        ";
+        break;
+
+
+
+    case 'teacher_latest':
+    default:
+        // Teacher's requirement: latest booking/record at the top.
+        $sql .= "
+            ORDER BY
+                a.created_at DESC,
+                a.id DESC
+        ";
+        break;
+}
 
 
 $stmt = $pdo->prepare($sql);
@@ -630,9 +668,10 @@ $completedAppointments = (int) $pdo
             display: grid;
 
             grid-template-columns:
-                1.8fr
+                1.6fr
                 1fr
                 1fr
+                1.35fr
                 auto
                 auto;
 
@@ -1223,6 +1262,8 @@ $completedAppointments = (int) $pdo
 
             <p>
                 Manage and monitor all veterinary appointments.
+                Use <strong>Show / Sort By</strong> to switch between
+                your teacher's latest-booking view and date/time views.
             </p>
 
         </section>
@@ -1409,6 +1450,40 @@ $completedAppointments = (int) $pdo
                             'UTF-8'
                         ) ?>"
                     >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="sort">
+                        Show / Sort By
+                    </label>
+
+                    <select
+                        id="sort"
+                        name="sort"
+                        onchange="this.form.submit()"
+                        title="Choose how appointments should be displayed"
+                    >
+                        <option
+                            value="teacher_latest"
+                            <?= $sort === 'teacher_latest'
+                                ? 'selected'
+                                : '' ?>
+                        >
+                            Latest Added
+                        </option>
+
+                        <option
+                            value="upcoming"
+                            <?= $sort === 'upcoming'
+                                ? 'selected'
+                                : '' ?>
+                        >
+                            Nearest Date &amp; Time
+                        </option>
+                    </select>
 
                 </div>
 

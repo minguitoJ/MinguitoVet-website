@@ -38,27 +38,36 @@ $customerId = (int) $_SESSION['customer_id'];
 $ownerName = trim($_POST['owner_name'] ?? '');
 $petName = trim($_POST['pet_name'] ?? '');
 $petType = trim($_POST['pet_type'] ?? '');
-$service = trim($_POST['service'] ?? '');
+
+$selectedServices = $_POST['services'] ?? [];
+
+/*
+ * Backward compatibility for an older single-service form.
+ */
+if (
+    empty($selectedServices)
+    && isset($_POST['service'])
+    && trim((string)$_POST['service']) !== ''
+) {
+    $selectedServices = [
+        trim((string)$_POST['service'])
+    ];
+}
+
+if (!is_array($selectedServices)) {
+    $selectedServices = [];
+}
+
+$selectedServices = array_values(array_unique(array_filter(
+    array_map(
+        static fn($service) => trim((string)$service),
+        $selectedServices
+    ),
+    static fn($service) => $service !== ''
+)));
+
 $appointmentDate = trim($_POST['appointment_date'] ?? '');
 $appointmentTime = trim($_POST['appointment_time'] ?? '');
-
-
-/* =========================================================
-   VALID SERVICES
-
-   These must match the services shown on services.php
-   and appointment.php.
-========================================================= */
-
-$allowedServices = [
-    'General Checkup',
-    'Vaccination',
-    'Preventive Care',
-    'Dental Care',
-    'Surgery & Treatment',
-    'Laboratory & Diagnostics',
-    'Grooming & Wellness'
-];
 
 
 /* =========================================================
@@ -69,7 +78,7 @@ if (
     $ownerName === '' ||
     $petName === '' ||
     $petType === '' ||
-    $service === '' ||
+    empty($selectedServices) ||
     $appointmentDate === '' ||
     $appointmentTime === ''
 ) {
@@ -90,12 +99,76 @@ if (!in_array($petType, ['Dog', 'Cat'], true)) {
 
 /* =========================================================
    SERVICE VALIDATION
+=========================================================
+   Every selected service must exist in the Services table
+   and must currently be Active.
 ========================================================= */
 
-if (!in_array($service, $allowedServices, true)) {
-    header("Location: ../appointment.php?error=service");
-    exit;
+$servicePlaceholders = [];
+$serviceParams = [];
+
+foreach ($selectedServices as $index => $selectedService) {
+
+    $placeholder = ':service_' . $index;
+
+    $servicePlaceholders[] = $placeholder;
+    $serviceParams[$placeholder] = $selectedService;
 }
+
+$serviceValidationStmt = $pdo->prepare("
+    SELECT name
+    FROM services
+    WHERE status = 'Active'
+      AND LOWER(TRIM(name)) IN (" .
+    implode(', ', $servicePlaceholders) .
+    ")
+");
+
+foreach ($serviceParams as $placeholder => $value) {
+    $serviceValidationStmt->bindValue(
+        $placeholder,
+        $value,
+        PDO::PARAM_STR
+    );
+}
+
+$serviceValidationStmt->execute();
+
+$activeServiceNames =
+    $serviceValidationStmt->fetchAll(PDO::FETCH_COLUMN);
+
+$activeServiceMap = [];
+
+foreach ($activeServiceNames as $activeName) {
+    $activeServiceMap[
+        strtolower(trim($activeName))
+    ] = $activeName;
+}
+
+$normalizedSelectedServices = [];
+
+foreach ($selectedServices as $selectedService) {
+
+    $key = strtolower(trim($selectedService));
+
+    if (!isset($activeServiceMap[$key])) {
+        header("Location: ../appointment.php?error=service");
+        exit;
+    }
+
+    $normalizedSelectedServices[] =
+        $activeServiceMap[$key];
+}
+
+$normalizedSelectedServices =
+    array_values(array_unique($normalizedSelectedServices));
+
+/*
+ * Keep the existing appointments.service column.
+ * Multiple services are stored as a readable comma-separated list.
+ */
+$service =
+    implode(', ', $normalizedSelectedServices);
 
 
 /* =========================================================

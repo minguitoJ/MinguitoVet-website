@@ -18,6 +18,75 @@ $messageType = 'error';
 
 /*
 |--------------------------------------------------------------------------
+| APPOINTMENT SERVICE HELPERS
+|--------------------------------------------------------------------------
+| Multiple selected services are stored in appointments.service as a
+| comma-separated list. Each service becomes its own payment item.
+*/
+function getAppointmentServiceNames(string $serviceValue): array
+{
+    return array_values(array_unique(array_filter(
+        array_map(
+            static fn($name) => trim($name),
+            explode(',', $serviceValue)
+        ),
+        static fn($name) => $name !== ''
+    )));
+}
+
+function getActiveServicesByNames(
+    PDO $pdo,
+    array $serviceNames
+): array {
+    if (empty($serviceNames)) {
+        return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+
+    foreach ($serviceNames as $index => $serviceName) {
+
+        $placeholder = ':service_' . $index;
+
+        $placeholders[] = $placeholder;
+        $params[$placeholder] = $serviceName;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT id, name, price
+        FROM services
+        WHERE status = 'Active'
+          AND LOWER(TRIM(name)) IN (" .
+        implode(', ', $placeholders) .
+        ")
+        ORDER BY name ASC
+    ");
+
+    foreach ($params as $placeholder => $value) {
+        $stmt->bindValue(
+            $placeholder,
+            $value,
+            PDO::PARAM_STR
+        );
+    }
+
+    $stmt->execute();
+
+    $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $map = [];
+
+    foreach ($services as $service) {
+        $map[
+            strtolower(trim($service['name']))
+        ] = $service;
+    }
+
+    return $map;
+}
+
+/*
+|--------------------------------------------------------------------------
 | SAVE / PREPARE PAYMENT BILL
 |--------------------------------------------------------------------------
 | Admin prepares the bill only.
@@ -226,38 +295,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         }
 
         /*
-         * IMPORTANT:
-         * The appointment service is matched directly against the
-         * Active services table. The price is NEVER typed by the admin.
+         * Resolve every selected appointment service from the Active
+         * Services table. Prices are never typed by the admin.
          */
-        $serviceStmt = $pdo->prepare("
-            SELECT id, name, price
-            FROM services
-            WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
-              AND status = 'Active'
-            LIMIT 1
-        ");
-        $serviceStmt->execute([
-            ':name' => $appointment['service']
-        ]);
-        $service = $serviceStmt->fetch(PDO::FETCH_ASSOC);
+        $appointmentServiceNames =
+            getAppointmentServiceNames(
+                (string)$appointment['service']
+            );
 
-        if (!$service) {
+        if (empty($appointmentServiceNames)) {
             throw new Exception(
-                'The selected appointment service "' .
-                $appointment['service'] .
-                '" is not available as an Active service. Please add or activate it in the Services page.'
+                'This appointment has no veterinary services selected.'
             );
         }
 
-        $servicePrice = (float)$service['price'];
-
-        if ($servicePrice <= 0) {
-            throw new Exception(
-                'The service "' . $service['name'] .
-                '" has a price of ₱0.00. Please set its correct price in the Services page.'
+        $activeServicesByName =
+            getActiveServicesByNames(
+                $pdo,
+                $appointmentServiceNames
             );
+
+        $serviceItems = [];
+        $serviceTotal = 0.00;
+
+        foreach ($appointmentServiceNames as $serviceName) {
+
+            $serviceKey =
+                strtolower(trim($serviceName));
+
+            if (!isset($activeServicesByName[$serviceKey])) {
+                throw new Exception(
+                    'The selected appointment service "' .
+                    $serviceName .
+                    '" is not available as an Active service. Please add or activate it in the Services page.'
+                );
+            }
+
+            $resolvedService =
+                $activeServicesByName[$serviceKey];
+
+            $servicePrice =
+                (float)$resolvedService['price'];
+
+            if ($servicePrice <= 0) {
+                throw new Exception(
+                    'The service "' .
+                    $resolvedService['name'] .
+                    '" has a price of ₱0.00. Please set its correct price in the Services page.'
+                );
+            }
+
+            $serviceItems[] = [
+                'name' => $resolvedService['name'],
+                'price' => $servicePrice
+            ];
+
+            $serviceTotal += $servicePrice;
         }
+
+        $serviceTotal =
+            round($serviceTotal, 2);
 
         // Validate medicine selections using current database values.
         $items = [];
@@ -347,7 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             }
         }
 
-        $totalAmount = $servicePrice + $medicineTotal;
+        $totalAmount = $serviceTotal + $medicineTotal;
 
         if ($totalAmount <= 0) {
             throw new Exception('Payment total must be greater than zero.');
@@ -442,7 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             $paymentId = (int)$pdo->lastInsertId();
         }
 
-        // Add appointment service.
+        // Add every selected appointment service as its own bill item.
         $serviceItemStmt = $pdo->prepare("
             INSERT INTO payment_items
             (
@@ -464,12 +561,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             )
         ");
 
-        $serviceItemStmt->execute([
-            ':payment_id' => $paymentId,
-            ':item_name'  => $service['name'],
-            ':unit_price' => $servicePrice,
-            ':subtotal'   => $servicePrice
-        ]);
+        foreach ($serviceItems as $serviceItem) {
+
+            $serviceItemStmt->execute([
+                ':payment_id' => $paymentId,
+                ':item_name'  => $serviceItem['name'],
+                ':unit_price' => $serviceItem['price'],
+                ':subtotal'   => $serviceItem['price']
+            ]);
+        }
 
         // Add medicine items.
         if (!empty($items)) {
@@ -557,24 +657,45 @@ if (!$appointment) {
 
 /*
 |--------------------------------------------------------------------------
-| GET SERVICE PRICE DIRECTLY FROM SERVICES TABLE
+| GET ALL APPOINTMENT SERVICE PRICES
 |--------------------------------------------------------------------------
 */
-$serviceStmt = $pdo->prepare("
-    SELECT id, name, price
-    FROM services
-    WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
-      AND status = 'Active'
-    LIMIT 1
-");
-$serviceStmt->execute([
-    ':name' => $appointment['service']
-]);
+$appointmentServiceNames =
+    getAppointmentServiceNames(
+        (string)$appointment['service']
+    );
 
-$service = $serviceStmt->fetch(PDO::FETCH_ASSOC);
+$displayServices =
+    getActiveServicesByNames(
+        $pdo,
+        $appointmentServiceNames
+    );
 
-$servicePrice = $service ? (float)$service['price'] : 0.00;
-$serviceFound = (bool)$service;
+$displayServiceTotal = 0.00;
+$missingDisplayServices = [];
+
+foreach ($appointmentServiceNames as $serviceName) {
+
+    $key =
+        strtolower(trim($serviceName));
+
+    if (!isset($displayServices[$key])) {
+        $missingDisplayServices[] = $serviceName;
+        continue;
+    }
+
+    $displayServiceTotal +=
+        (float)$displayServices[$key]['price'];
+}
+
+$displayServiceTotal =
+    round($displayServiceTotal, 2);
+
+$serviceFound =
+    empty($missingDisplayServices);
+
+$servicePrice =
+    $displayServiceTotal;
 
 /*
 |--------------------------------------------------------------------------
@@ -1303,12 +1424,15 @@ if (!empty($paymentItems)) {
                         <div class="line-top">
 
                             <div class="line-name">
-                                <?= htmlspecialchars($appointment['service']) ?>
+                                Selected Veterinary Services
                             </div>
 
                             <div class="line-price">
                                 <?php if ($serviceFound): ?>
-                                    ₱<?= number_format($servicePrice, 2) ?>
+                                    ₱<?= number_format(
+                                        $displayServiceTotal,
+                                        2
+                                    ) ?>
                                 <?php else: ?>
                                     Price unavailable
                                 <?php endif; ?>
@@ -1316,26 +1440,95 @@ if (!empty($paymentItems)) {
 
                         </div>
 
+                        <div class="existing-items">
+
+                            <?php foreach (
+                                $appointmentServiceNames
+                                as $serviceName
+                            ): ?>
+
+                                <?php
+                                $serviceKey =
+                                    strtolower(trim($serviceName));
+
+                                $resolvedDisplayService =
+                                    $displayServices[
+                                        $serviceKey
+                                    ] ?? null;
+                                ?>
+
+                                <div class="existing-item">
+
+                                    <span>
+                                        <?= htmlspecialchars(
+                                            $serviceName,
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ) ?>
+                                    </span>
+
+                                    <strong>
+                                        <?php if (
+                                            $resolvedDisplayService
+                                        ): ?>
+                                            ₱<?= number_format(
+                                                (float)
+                                                $resolvedDisplayService['price'],
+                                                2
+                                            ) ?>
+                                        <?php else: ?>
+                                            Price unavailable
+                                        <?php endif; ?>
+                                    </strong>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
                         <div class="line-sub">
-                            Appointment service · Quantity 1
+                            <?= count($appointmentServiceNames) ?>
+                            selected service<?= count(
+                                $appointmentServiceNames
+                            ) === 1 ? '' : 's' ?>
                         </div>
 
                         <?php if (!$serviceFound): ?>
 
                             <div class="service-error">
-                                <strong>Service price not found.</strong><br>
-                                The appointment contains
-                                "<strong><?= htmlspecialchars($appointment['service']) ?></strong>",
-                                but that service is not currently Active in the Services table.
-                                Add/activate the exact service in
-                                <strong>Admin → Services</strong>.
+
+                                <strong>
+                                    Service price not found.
+                                </strong><br>
+
+                                The appointment contains service(s)
+                                that are not currently Active:
+
+                                <strong>
+                                    <?= htmlspecialchars(
+                                        implode(
+                                            ', ',
+                                            $missingDisplayServices
+                                        ),
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    ) ?>
+                                </strong>.
+
+                                Add or activate the exact service names
+                                in <strong>Admin → Services</strong>.
+
                             </div>
 
-                        <?php elseif ($servicePrice <= 0): ?>
+                        <?php elseif ($displayServiceTotal <= 0): ?>
 
                             <div class="service-error">
-                                <strong>Service price is ₱0.00.</strong><br>
-                                Please set the correct price in
+                                <strong>
+                                    Service price is ₱0.00.
+                                </strong><br>
+
+                                Please set the correct prices in
                                 <strong>Admin → Services</strong>.
                             </div>
 
