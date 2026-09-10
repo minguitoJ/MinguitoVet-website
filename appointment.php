@@ -1,23 +1,27 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['customer_id'])) {
+if (
+    !isset($_SESSION['user_id']) ||
+    ($_SESSION['user_role'] ?? '') !== 'customer'
+) {
     header('Location: login.php?redirect=appointment.php');
     exit;
 }
 
 require_once __DIR__ . '/config/database.php';
 
-$customerId = (int) $_SESSION['customer_id'];
+$customerId = (int) $_SESSION['user_id'];
 $customer = null;
 $error = '';
 
 try {
     $customerStmt = $pdo->prepare(
-        'SELECT id, full_name, email, contact_number
-         FROM customers
+        "SELECT id, full_name, email, contact_number
+         FROM users
          WHERE id = :id
-         LIMIT 1'
+           AND role = 'customer'
+         LIMIT 1"
     );
 
     $customerStmt->execute([
@@ -965,6 +969,9 @@ include 'includes/navbar.php';
                         'time' =>
                             'Please choose a valid appointment time.',
 
+                        'past_time' =>
+                            'The selected appointment time has already passed. Please choose a later time today.',
+
                         'database' =>
                             'We could not save your appointment right now. Please try again.',
 
@@ -1406,6 +1413,39 @@ document.addEventListener('DOMContentLoaded', function () {
        UPDATE TIME LIMITS WHEN DATE CHANGES
     ====================================================== */
 
+    function getNextAvailableSlot() {
+
+        const now = new Date();
+
+        let minutes =
+            now.getHours() * 60 +
+            now.getMinutes();
+
+        /*
+         * Always move to the next 30-minute slot.
+         * Example:
+         * 9:15 AM -> 9:30 AM
+         * 9:30 AM -> 10:00 AM
+         */
+        minutes =
+            Math.floor(minutes / 30) * 30 + 30;
+
+        const hours =
+            Math.floor(minutes / 60);
+
+        const mins =
+            minutes % 60;
+
+        if (hours > 23) {
+            return '23:59';
+        }
+
+        return String(hours).padStart(2, '0') +
+            ':' +
+            String(mins).padStart(2, '0');
+    }
+
+
     function updateTimeRules() {
 
         if (!dateInput || !timeInput) {
@@ -1466,15 +1506,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
         /*
+         * If the customer selected TODAY,
+         * prevent choosing a time that has
+         * already passed.
+         *
+         * The minimum is rounded up to the
+         * next 30-minute appointment slot.
+         */
+
+        const now = new Date();
+
+        const todayString =
+            now.getFullYear() +
+            '-' +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(now.getDate()).padStart(2, '0');
+
+
+        if (dateInput.value === todayString) {
+
+            const nextSlot =
+                getNextAvailableSlot();
+
+            if (nextSlot > timeInput.min) {
+                timeInput.min = nextSlot;
+            }
+
+            /*
+             * No more appointment slots today.
+             */
+            if (timeInput.min > timeInput.max) {
+                timeInput.value = '';
+                timeInput.setCustomValidity(
+                    'There are no more appointment slots available today. Please choose another date.'
+                );
+            }
+        }
+
+
+
+        /*
          * Clear an already-selected time
-         * if it falls outside clinic hours.
+         * if it falls outside the allowed range.
          */
 
         if (
             timeInput.value &&
             (
-                timeInput.value < hours[0] ||
-                timeInput.value > hours[1]
+                timeInput.value < timeInput.min ||
+                timeInput.value > timeInput.max
             )
         ) {
 
@@ -1492,7 +1573,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     dateInput.addEventListener(
         'change',
-        updateTimeRules
+        function () {
+            timeInput.setCustomValidity('');
+            updateTimeRules();
+        }
     );
 
 
@@ -1585,6 +1669,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     timeInput.reportValidity();
 
+                    timeInput.focus();
+
+                    return;
+                }
+
+
+                /*
+                 * If the selected date is TODAY,
+                 * make sure the chosen time has
+                 * not already passed.
+                 */
+
+                const now = new Date();
+
+                const todayString =
+                    now.getFullYear() +
+                    '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    '-' +
+                    String(now.getDate()).padStart(2, '0');
+
+                const currentTime =
+                    String(now.getHours()).padStart(2, '0') +
+                    ':' +
+                    String(now.getMinutes()).padStart(2, '0');
+
+
+                if (
+                    dateInput.value === todayString &&
+                    timeInput.value <= currentTime
+                ) {
+
+                    event.preventDefault();
+
+                    timeInput.setCustomValidity(
+                        'The selected appointment time has already passed. Please choose a later time today.'
+                    );
+
+                    timeInput.reportValidity();
                     timeInput.focus();
 
                     return;

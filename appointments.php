@@ -2,14 +2,14 @@
 
 session_start();
 
-if (!isset($_SESSION['customer_id'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'customer') {
     header('Location: login.php?redirect=appointments.php');
     exit;
 }
 
 require_once __DIR__ . '/config/database.php';
 
-$customerId = (int) $_SESSION['customer_id'];
+$customerId = (int) $_SESSION['user_id'];
 
 $appointments = [];
 $error = '';
@@ -388,6 +388,7 @@ function formatTimeValue(string $time): string
     line-height: 1.7;
 }
 
+
 .payment-notice {
     margin-bottom: 18px;
     padding: 14px 16px;
@@ -446,6 +447,11 @@ function formatTimeValue(string $time): string
 .payment-status.cancelled {
     background: #fff1ee;
     color: #a13d32;
+}
+
+.payment-status.refunded {
+    background: #eef0ff;
+    color: #4c568f;
 }
 
 .payment-button {
@@ -617,12 +623,10 @@ function formatTimeValue(string $time): string
         <?php endif; ?>
 
         <?php if (($_GET['payment'] ?? '') === 'submitted'): ?>
-
             <div class="payment-notice success">
                 <i class="fa-solid fa-circle-check"></i>
                 <span>Payment submitted successfully. Please wait while the clinic verifies your payment.</span>
             </div>
-
         <?php endif; ?>
 
 
@@ -761,108 +765,143 @@ function formatTimeValue(string $time): string
 
                         </div>
 
-                        <?php
-                            $paymentStatus = trim($appointment['payment_status'] ?? '');
-                            $appointmentStatus = strtolower($status);
-                        ?>
+        <?php
+            $paymentStatus = trim($appointment['payment_status'] ?? '');
+            $appointmentStatus = strtolower($status);
+        ?>
 
-                        <div class="payment-area">
+        <div class="payment-area">
 
-                            <?php if (
-                                $appointmentStatus === 'approved' &&
-                                (
-                                    $paymentStatus === '' ||
-                                    (
-                                        $paymentStatus === 'Pending' &&
-                                        empty(trim($appointment['reference_number'] ?? ''))
-                                    )
-                                )
-                            ): ?>
+            <?php if (
+                $appointmentStatus === 'approved' &&
+                (
+                    $paymentStatus === '' ||
+                    (
+                        $paymentStatus === 'Pending' &&
+                        empty(trim($appointment['reference_number'] ?? ''))
+                    )
+                )
+            ): ?>
 
-                                <span class="payment-status required">
-                                    <i class="fa-solid fa-wallet"></i>
-                                    Payment Required
-                                </span>
+                <span class="payment-status required">
+                    <i class="fa-solid fa-wallet"></i>
+                    Payment Required
+                </span>
 
-                                <a
-                                    href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
-                                    class="payment-button"
-                                >
-                                    <i class="fa-solid fa-credit-card"></i>
-                                    Pay Appointment
-                                </a>
+                <a
+                    href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
+                    class="payment-button"
+                >
+                    <i class="fa-solid fa-credit-card"></i>
+                    Pay Appointment
+                </a>
 
-                            <?php elseif ($paymentStatus === 'Pending'): ?>
+            <?php elseif ($paymentStatus === 'Pending'): ?>
 
-                                <span class="payment-status pending">
-                                    <i class="fa-solid fa-clock"></i>
-                                    Pending Verification
-                                </span>
+                <span class="payment-status pending">
+                    <i class="fa-solid fa-clock"></i>
+                    Pending Verification
+                </span>
 
-                                <div class="payment-info">
-                                    <div class="payment-info-box">
-                                        <span>Amount</span>
-                                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
-                                    </div>
-                                    <div class="payment-info-box">
-                                        <span>Method</span>
-                                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
-                                    </div>
-                                    <div class="payment-info-box">
-                                        <span>Reference</span>
-                                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
-                                    </div>
-                                </div>
+                <div class="payment-info">
+                    <div class="payment-info-box">
+                        <span>Amount</span>
+                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
+                    </div>
+                    <div class="payment-info-box">
+                        <span>Method</span>
+                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
+                    </div>
+                    <div class="payment-info-box">
+                        <span>Reference</span>
+                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
+                    </div>
+                </div>
 
-                            <?php elseif ($paymentStatus === 'Paid'): ?>
+            <?php elseif ($paymentStatus === 'Paid'): ?>
 
-                                <span class="payment-status paid">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                    Payment Paid
-                                </span>
+                <span class="payment-status paid">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Payment Paid
+                </span>
 
-                                <div class="payment-info">
-                                    <div class="payment-info-box">
-                                        <span>Amount</span>
-                                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
-                                    </div>
-                                    <div class="payment-info-box">
-                                        <span>Method</span>
-                                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
-                                    </div>
-                                    <div class="payment-info-box">
-                                        <span>Reference</span>
-                                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
-                                    </div>
-                                </div>
+                <div class="payment-info">
+                    <div class="payment-info-box">
+                        <span>Amount</span>
+                        <strong>₱<?= number_format((float)$appointment['payment_amount'], 2) ?></strong>
+                    </div>
+                    <div class="payment-info-box">
+                        <span>Method</span>
+                        <strong><?= htmlspecialchars($appointment['payment_method'] ?? '', ENT_QUOTES, 'UTF-8') ?></strong>
+                    </div>
+                    <div class="payment-info-box">
+                        <span>Reference</span>
+                        <strong><?= !empty($appointment['reference_number']) ? htmlspecialchars($appointment['reference_number'], ENT_QUOTES, 'UTF-8') : 'Not applicable' ?></strong>
+                    </div>
+                </div>
 
-                            <?php elseif ($paymentStatus === 'Cancelled'): ?>
+            <?php elseif ($paymentStatus === 'Refunded'): ?>
 
-                                <span class="payment-status cancelled">
-                                    <i class="fa-solid fa-circle-xmark"></i>
-                                    Payment Rejected
-                                </span>
+                <span class="payment-status refunded">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Payment Refunded
+                </span>
 
-                                <?php if ($appointmentStatus === 'approved'): ?>
-                                    <a
-                                        href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
-                                        class="payment-button"
-                                    >
-                                        <i class="fa-solid fa-rotate-right"></i>
-                                        Submit Payment Again
-                                    </a>
-                                <?php endif; ?>
+                <div class="payment-info">
+                    <div class="payment-info-box">
+                        <span>Refund Amount</span>
+                        <strong>
+                            ₱<?= number_format(
+                                (float)$appointment['payment_amount'],
+                                2
+                            ) ?>
+                        </strong>
+                    </div>
 
-                            <?php elseif ($appointmentStatus === 'completed'): ?>
+                    <div class="payment-info-box">
+                        <span>Method</span>
+                        <strong>
+                            <?= htmlspecialchars(
+                                $appointment['payment_method'] ?? '',
+                                ENT_QUOTES,
+                                'UTF-8'
+                            ) ?>
+                        </strong>
+                    </div>
 
-                                <span class="payment-status paid">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                    Appointment Completed
-                                </span>
+                    <div class="payment-info-box">
+                        <span>Status</span>
+                        <strong>Refunded</strong>
+                    </div>
+                </div>
 
-                            <?php endif; ?>
+            <?php elseif ($paymentStatus === 'Cancelled'): ?>
 
-                        </div>
+                <span class="payment-status cancelled">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    Payment Rejected
+                </span>
+
+                <?php if ($appointmentStatus === 'approved'): ?>
+                    <a
+                        href="payment.php?appointment_id=<?= (int)$appointment['id'] ?>"
+                        class="payment-button"
+                    >
+                        <i class="fa-solid fa-rotate-right"></i>
+                        Submit Payment Again
+                    </a>
+                <?php endif; ?>
+
+            <?php elseif ($appointmentStatus === 'completed'): ?>
+
+                <span class="payment-status paid">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Appointment Completed
+                </span>
+
+            <?php endif; ?>
+
+        </div>
 
                     </article>
 

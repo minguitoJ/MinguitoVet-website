@@ -103,17 +103,159 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($canComplete) {
 
-                $stmt = $pdo->prepare("
-                    UPDATE appointments
-                    SET status = :status
-                    WHERE id = :id
-                    AND status NOT IN ('Completed', 'Cancelled')
-                ");
+                /*
+                 * Cancellation + refund:
+                 * - If the latest payment is Paid, mark it Refunded.
+                 * - Restore medicine quantities that were deducted during payment.
+                 * - If the latest payment is Pending, simply cancel the payment.
+                 * - Everything is committed together with the appointment cancellation.
+                 */
+                if ($newStatus === 'Cancelled') {
 
-                $stmt->execute([
-                    ':status' => $newStatus,
-                    ':id' => $appointmentId
-                ]);
+                    $pdo->beginTransaction();
+
+                    try {
+
+                        $paymentLockStmt = $pdo->prepare("
+                            SELECT id, payment_status
+                            FROM payments
+                            WHERE appointment_id = :appointment_id
+                            ORDER BY id DESC
+                            LIMIT 1
+                            FOR UPDATE
+                        ");
+
+                        $paymentLockStmt->execute([
+                            ':appointment_id' => $appointmentId
+                        ]);
+
+                        $lockedPayment = $paymentLockStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (
+                            $lockedPayment &&
+                            $lockedPayment['payment_status'] === 'Paid'
+                        ) {
+
+                            /*
+                             * Restore medicine stock from the paid transaction.
+                             * Maximum medicine stock remains 5.
+                             */
+                            $itemsLockStmt = $pdo->prepare("
+                                SELECT item_type, item_name, quantity
+                                FROM payment_items
+                                WHERE payment_id = :payment_id
+                                FOR UPDATE
+                            ");
+
+                            $itemsLockStmt->execute([
+                                ':payment_id' => $lockedPayment['id']
+                            ]);
+
+                            $refundItems = $itemsLockStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                            foreach ($refundItems as $refundItem) {
+
+                                if (
+                                    strtolower(trim((string)$refundItem['item_type'])) !==
+                                    'medicine'
+                                ) {
+                                    continue;
+                                }
+
+                                $quantity = (int)$refundItem['quantity'];
+
+                                if ($quantity <= 0) {
+                                    continue;
+                                }
+
+                                $medicineStmt = $pdo->prepare("
+                                    UPDATE medicines
+                                    SET stock = LEAST(stock + :quantity, 5)
+                                    WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name))
+                                ");
+
+                                $medicineStmt->execute([
+                                    ':quantity' => $quantity,
+                                    ':name' => $refundItem['item_name']
+                                ]);
+                            }
+
+                            /*
+                             * A refunded payment is no longer a sale.
+                             */
+                            $refundStmt = $pdo->prepare("
+                                UPDATE payments
+                                SET payment_status = 'Refunded',
+                                    refunded_at = NOW()
+                                WHERE id = :id
+                                  AND payment_status = 'Paid'
+                            ");
+
+                            $refundStmt->execute([
+                                ':id' => $lockedPayment['id']
+                            ]);
+
+                        } elseif (
+                            $lockedPayment &&
+                            $lockedPayment['payment_status'] === 'Pending'
+                        ) {
+
+                            $cancelPaymentStmt = $pdo->prepare("
+                                UPDATE payments
+                                SET payment_status = 'Cancelled',
+                                    paid_at = NULL
+                                WHERE id = :id
+                                  AND payment_status = 'Pending'
+                            ");
+
+                            $cancelPaymentStmt->execute([
+                                ':id' => $lockedPayment['id']
+                            ]);
+                        }
+
+                        $stmt = $pdo->prepare("
+                            UPDATE appointments
+                            SET status = 'Cancelled'
+                            WHERE id = :id
+                              AND status NOT IN ('Completed', 'Cancelled')
+                        ");
+
+                        $stmt->execute([
+                            ':id' => $appointmentId
+                        ]);
+
+                        $pdo->commit();
+
+                    } catch (Throwable $e) {
+
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+
+                        error_log(
+                            'Minguito appointment cancellation/refund error: ' .
+                            $e->getMessage()
+                        );
+
+                        header('Location: appointments.php?error=refund_failed');
+                        exit;
+                    }
+
+                } else {
+
+                    $stmt = $pdo->prepare("
+                        UPDATE appointments
+                        SET status = :status
+                        WHERE id = :id
+                        AND status NOT IN ('Completed', 'Cancelled')
+                    ");
+
+                    $stmt->execute([
+                        ':status' => $newStatus,
+                        ':id' => $appointmentId
+                    ]);
+                }
+
             } else {
 
                 /*
@@ -196,8 +338,9 @@ $sql = "
         COALESCE(p.payment_method, '') AS payment_method
     FROM appointments a
 
-    LEFT JOIN customers c
+    LEFT JOIN users c
         ON a.customer_id = c.id
+       AND c.role = 'customer'
 
     LEFT JOIN payments p
         ON p.id = (
@@ -355,21 +498,21 @@ $completedAppointments = (int) $pdo
     <style>
 
         :root {
-            --green: #073b2a;
-            --green-light: #174c3b;
-            --cream: #f8efe2;
-            --gold: #b57a2f;
-            --gold-light: #d4a15c;
+            --green: #2f6b4f;
+            --green-light: #24543e;
+            --cream: #f8f1e5;
+            --gold: #c89b3c;
+            --gold-light: #c89b3c;
             --white: #ffffff;
-            --text: #17231e;
-            --muted: #66756e;
-            --border: #e6d7c2;
+            --text: #26352d;
+            --muted: #7b877f;
+            --border: #e4e8e3;
 
-            --success: #14633f;
-            --warning: #a66a16;
-            --danger: #a13d32;
+            --success: #2f6b4f;
+            --warning: #9a7425;
+            --danger: #c65c5c;
 
-            --blue: #315a78;
+            --blue: #5d8497;
         }
 
 
@@ -393,143 +536,11 @@ $completedAppointments = (int) $pdo
             background:
                 linear-gradient(
                     135deg,
-                    #fbf4e9,
-                    #f4e6d2
+                    #f5f6f2,
+                    #f8f1e5
                 );
         }
 
-
-        /* =====================================
-           HEADER
-        ===================================== */
-
-        .admin-header {
-            background: var(--green);
-
-            color: white;
-
-            padding: 18px 0;
-
-            box-shadow:
-                0 5px 20px
-                rgba(0, 0, 0, .12);
-        }
-
-
-        .header-inner {
-            width: min(1180px, 92%);
-
-            margin: auto;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            gap: 20px;
-        }
-
-
-        .brand {
-            display: flex;
-
-            align-items: center;
-
-            gap: 12px;
-        }
-
-
-        .brand-icon {
-            width: 58px;
-            height: 58px;
-            flex: 0 0 58px;
-
-            border-radius: 14px;
-
-            background: #f8efe2;
-            border: 1px solid rgba(212, 161, 92, .35);
-            padding: 5px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-
-            box-shadow: 0 6px 16px rgba(0, 0, 0, .12);
-        }
-
-        .brand-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-        }
-
-
-        .brand-text strong {
-            display: block;
-
-            font-size: 16px;
-
-            font-weight: 800;
-        }
-
-
-        .brand-text span {
-            display: block;
-
-            margin-top: 2px;
-
-            color: #d7e3dd;
-
-            font-size: 10px;
-
-            letter-spacing: 1px;
-
-            text-transform: uppercase;
-        }
-
-
-        .header-links {
-            display: flex;
-
-            align-items: center;
-
-            gap: 10px;
-        }
-
-
-        .header-link {
-            padding: 9px 14px;
-
-            border-radius: 9px;
-
-            color: white;
-
-            text-decoration: none;
-
-            font-size: 12px;
-
-            font-weight: 800;
-
-            transition: .2s ease;
-        }
-
-
-        .header-link:hover {
-            background: rgba(255,255,255,.1);
-        }
-
-
-        .header-link.logout {
-            background: var(--gold);
-        }
-
-
-        .header-link.logout:hover {
-            background: var(--gold-light);
-        }
 
 
         /* =====================================
@@ -708,11 +719,11 @@ $completedAppointments = (int) $pdo
 
             border:
                 1px solid
-                #dccab4;
+                #e4e8e3;
 
             border-radius: 10px;
 
-            background: #fffaf3;
+            background: #fcfdfb;
 
             color: var(--text);
 
@@ -865,7 +876,7 @@ $completedAppointments = (int) $pdo
         th {
             padding: 14px 16px;
 
-            background: #fcf7ef;
+            background: #f8f1e5;
 
             color: var(--muted);
 
@@ -886,7 +897,7 @@ $completedAppointments = (int) $pdo
 
             border-top:
                 1px solid
-                #eee3d4;
+                #eef0ed;
 
             font-size: 12px;
 
@@ -895,7 +906,7 @@ $completedAppointments = (int) $pdo
 
 
         tbody tr:hover {
-            background: #fffbf5;
+            background: #fcfdfb;
         }
 
 
@@ -967,7 +978,7 @@ $completedAppointments = (int) $pdo
 
             border: 1px solid var(--border);
 
-            background: #fffaf3;
+            background: #fcfdfb;
 
             color: var(--green);
 
@@ -1175,75 +1186,60 @@ $completedAppointments = (int) $pdo
 
     </style>
 
+
+    <link rel="stylesheet" href="../assets/css/sidebar.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        .admin-content {
+            margin-left: 270px;
+            width: calc(100% - 270px);
+            min-height: 100vh;
+            padding: 34px 38px 50px;
+            box-sizing: border-box;
+        }
+
+        .admin-content .container {
+            width: 100%;
+            max-width: none;
+        }
+
+        @media (max-width: 980px) {
+            .admin-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 82px 20px 40px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .admin-content {
+                padding: 78px 15px 35px;
+            }
+        }
+    </style>
+
 </head>
 
 
 <body>
+
+<?php include 'sidebar.php'; ?>
 
 
 <!-- =====================================
      HEADER
 ===================================== -->
 
-<header class="admin-header">
 
-    <div class="header-inner">
-
-
-        <div class="brand">
-
-            <div class="brand-icon">
-                <img
-                    src="../assets/images/logo2.png"
-                    alt="Minguito Veterinary Clinic Logo"
-                >
-            </div>
-
-            <div class="brand-text">
-
-                <strong>
-                    Minguito Veterinary
-                </strong>
-
-                <span>
-                    Administration Panel
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="header-links">
-
-            <a
-                href="dashboard.php"
-                class="header-link"
-            >
-                Dashboard
-            </a>
-
-
-            <a
-                href="../logout.php"
-                class="header-link logout"
-            >
-                Logout
-            </a>
-
-        </div>
-
-
-    </div>
-
-</header>
 
 
 <!-- =====================================
      MAIN
 ===================================== -->
 
-<main class="main">
+<main class="main admin-content">
 
     <div class="container">
 
@@ -1277,6 +1273,16 @@ $completedAppointments = (int) $pdo
                 </span>
             </div>
 
+        <?php endif; ?>
+
+        <?php if (($_GET['error'] ?? '') === 'refund_failed'): ?>
+            <div class="alert alert-warning">
+                <strong>Cancellation Failed</strong>
+                <span>
+                    The appointment could not be cancelled and the refund was not completed.
+                    Please try again.
+                </span>
+            </div>
         <?php endif; ?>
 
 
@@ -1728,6 +1734,17 @@ $completedAppointments = (int) $pdo
                                             <div class="locked-status">
                                                 🔒 Cancelled
                                             </div>
+
+                                            <?php if ($appointment['payment_status'] === 'Refunded'): ?>
+                                                <div style="
+                                                    margin-top: 6px;
+                                                    color: #4c568f;
+                                                    font-size: 10px;
+                                                    font-weight: 800;
+                                                ">
+                                                    ↩ Refunded
+                                                </div>
+                                            <?php endif; ?>
 
                                         <?php else: ?>
 

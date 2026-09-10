@@ -4,6 +4,12 @@
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 
+// Payment Management is part of the Appointments workflow,
+// so keep Appointments highlighted while viewing payment.php.
+$activePage = ($currentPage === 'payment.php')
+    ? 'appointments.php'
+    : $currentPage;
+
 $navItems = [
     ['page' => 'dashboard.php',    'label' => 'Dashboard',     'icon' => 'fa-solid fa-gauge-high'],
     ['page' => 'appointments.php', 'label' => 'Appointments',  'icon' => 'fa-solid fa-calendar-check'],
@@ -11,6 +17,7 @@ $navItems = [
     ['page' => 'patients.php',     'label' => 'Patients',      'icon' => 'fa-solid fa-paw'],
     ['page' => 'services.php',     'label' => 'Services',      'icon' => 'fa-solid fa-stethoscope'],
     ['page' => 'medicines.php',    'label' => 'Medicines',     'icon' => 'fa-solid fa-pills'],
+    ['page' => 'sales.php',         'label' => 'Sales',         'icon' => 'fa-solid fa-chart-line'],
     ['page' => 'messages.php',     'label' => 'Messages',      'icon' => 'fa-solid fa-envelope'],
     ['page' => 'settings.php',     'label' => 'Settings',      'icon' => 'fa-solid fa-gear'],
 ];
@@ -88,7 +95,7 @@ $navItems = [
 
             <a
                 href="<?= htmlspecialchars($item['page']) ?>"
-                class="sidebar-link <?= $currentPage === $item['page'] ? 'active' : '' ?>"
+                class="sidebar-link <?= $activePage === $item['page'] ? 'active' : '' ?>"
             >
 
                 <span class="sidebar-link-icon">

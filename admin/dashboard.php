@@ -51,7 +51,7 @@ $totalPatients = getCount(
 
 $totalCustomers = getCount(
     $pdo,
-    "SELECT COUNT(*) FROM customers"
+    "SELECT COUNT(*) FROM users WHERE role = 'customer'"
 );
 
 $totalServices = getCount(
@@ -69,9 +69,15 @@ $totalMessages = getCount(
     "SELECT COUNT(*) FROM contact_messages"
 );
 
+// Total sales — only paid transactions count as sales.
+$totalSalesStmt = $pdo->query(
+    "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payment_status = 'Paid'"
+);
+$totalSales = (float) $totalSalesStmt->fetchColumn();
+
 // Medicine stock / restock monitoring
-// Maximum stock per medicine: 6
-$maxMedicineStock = 6;
+// Maximum stock per medicine: 5
+$maxMedicineStock = 5;
 
 $restockStmt = $pdo->query("
     SELECT id, name, stock, status
@@ -116,8 +122,9 @@ $todayStmt = $pdo->prepare("
         a.status,
         c.email AS customer_email
     FROM appointments a
-    LEFT JOIN customers c
+    LEFT JOIN users c
         ON c.id = a.customer_id
+       AND c.role = 'customer'
     WHERE a.appointment_date = :today
     ORDER BY a.appointment_time ASC, a.id ASC
     LIMIT 8
@@ -144,8 +151,9 @@ $recentStmt = $pdo->query("
         a.status,
         c.full_name AS customer_name
     FROM appointments a
-    LEFT JOIN customers c
+    LEFT JOIN users c
         ON c.id = a.customer_id
+       AND c.role = 'customer'
     ORDER BY a.created_at DESC, a.id DESC
     LIMIT 7
 ");
@@ -430,7 +438,7 @@ function formatTimeValue(?string $time): string
             display: grid;
 
             grid-template-columns:
-                repeat(4, minmax(0, 1fr));
+                repeat(5, minmax(0, 1fr));
 
             gap: 16px;
 
@@ -1494,6 +1502,38 @@ function formatTimeValue(?string $time): string
 
                 <div class="stat-note">
                     Cancelled appointments
+                </div>
+
+            </article>
+
+
+            <!-- TOTAL SALES -->
+
+            <article class="stat-card gold">
+
+                <div class="stat-top">
+
+                    <div class="stat-icon">
+
+                        <i class="fa-solid fa-peso-sign"></i>
+
+                    </div>
+
+                </div>
+
+
+                <div class="stat-label">
+                    Total Sales
+                </div>
+
+
+                <div class="stat-value">
+                    ₱<?= number_format($totalSales, 2) ?>
+                </div>
+
+
+                <div class="stat-note">
+                    From paid transactions
                 </div>
 
             </article>

@@ -2,14 +2,32 @@
 
 session_start();
 
-if (!isset($_SESSION['customer_id'])) {
+require_once __DIR__ . '/config/database.php';
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER AUTHENTICATION
+|--------------------------------------------------------------------------
+| The customer account now comes from the unified users table.
+| Keep customer_id as a legacy fallback so older sessions do not
+| immediately break, but all profile data is loaded from users.
+|--------------------------------------------------------------------------
+*/
+
+$userId = (int) (
+    $_SESSION['user_id']
+    ?? $_SESSION['customer_id']
+    ?? 0
+);
+
+$userRole = $_SESSION['user_role'] ?? '';
+
+if ($userId <= 0 || ($userRole !== '' && $userRole !== 'customer')) {
     header('Location: login.php?redirect=profile.php');
     exit;
 }
 
-require_once __DIR__ . '/config/database.php';
-
-$customerId = (int) $_SESSION['customer_id'];
+$customerId = $userId;
 
 $success = '';
 $error = '';
@@ -18,7 +36,7 @@ $customer = null;
 
 
 /* =========================================================
-   LOAD CUSTOMER
+   LOAD CUSTOMER FROM USERS
 ========================================================= */
 
 try {
@@ -30,13 +48,15 @@ try {
             email,
             contact_number,
             created_at
-         FROM customers
+         FROM users
          WHERE id = :id
+           AND role = :role
          LIMIT 1'
     );
 
     $stmt->execute([
-        ':id' => $customerId
+        ':id' => $customerId,
+        ':role' => 'customer'
     ]);
 
     $customer = $stmt->fetch();
@@ -63,7 +83,7 @@ try {
 
 
 /* =========================================================
-   UPDATE CUSTOMER
+   UPDATE CUSTOMER IN USERS
 ========================================================= */
 
 if (
@@ -119,15 +139,17 @@ if (
             $check =
                 $pdo->prepare(
                     'SELECT id
-                     FROM customers
+                     FROM users
                      WHERE email = :email
                      AND id <> :id
+                     AND role = :role
                      LIMIT 1'
                 );
 
             $check->execute([
                 ':email' => $email,
-                ':id' => $customerId
+                ':id' => $customerId,
+                ':role' => 'customer'
             ]);
 
 
@@ -139,17 +161,18 @@ if (
             } else {
 
                 /* -----------------------------------------
-                   UPDATE
+                   UPDATE USERS TABLE
                 ----------------------------------------- */
 
                 $update =
                     $pdo->prepare(
-                        'UPDATE customers
+                        'UPDATE users
                          SET
                             full_name = :full_name,
                             email = :email,
                             contact_number = :contact_number
-                         WHERE id = :id'
+                         WHERE id = :id
+                           AND role = :role'
                     );
 
                 $update->execute([
@@ -164,7 +187,10 @@ if (
                         $contactNumber,
 
                     ':id' =>
-                        $customerId
+                        $customerId,
+
+                    ':role' =>
+                        'customer'
 
                 ]);
 
@@ -172,6 +198,15 @@ if (
                 /* -----------------------------------------
                    UPDATE SESSION
                 ----------------------------------------- */
+
+                $_SESSION['user_id'] =
+                    $customerId;
+
+                $_SESSION['user_role'] =
+                    'customer';
+
+                $_SESSION['customer_id'] =
+                    $customerId;
 
                 $_SESSION['customer_name'] =
                     $fullName;

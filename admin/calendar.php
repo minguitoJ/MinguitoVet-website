@@ -34,7 +34,7 @@ $monthName = $firstDay->format('F Y');
 /* =========================================================
    LOAD APPOINTMENTS FOR SELECTED MONTH
    ========================================================= */
-$stmt = $pdo->prepare("\n    SELECT\n        a.id,\n        a.customer_id,\n        a.owner_name,\n        a.pet_name,\n        a.service,\n        a.appointment_date,\n        a.appointment_time,\n        a.status,\n        c.full_name AS customer_name,\n        c.email AS customer_email\n    FROM appointments a\n    LEFT JOIN customers c ON a.customer_id = c.id\n    WHERE a.appointment_date BETWEEN :start_date AND :end_date\n    ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.id ASC\n");
+$stmt = $pdo->prepare("\n    SELECT\n        a.id,\n        a.customer_id,\n        a.owner_name,\n        a.pet_name,\n        a.service,\n        a.appointment_date,\n        a.appointment_time,\n        a.status,\n        c.full_name AS customer_name,\n        c.email AS customer_email\n    FROM appointments a\n    LEFT JOIN users c ON a.customer_id = c.id AND c.role = 'customer'\n    WHERE a.appointment_date BETWEEN :start_date AND :end_date\n    ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.id ASC\n");
 $stmt->execute([
     ':start_date' => $startDate,
     ':end_date' => $endDate
@@ -123,6 +123,11 @@ function formatAppointmentTime(?string $time): string
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/sidebar.css">
 
+    <!-- Google Fonts: match the shared admin typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --green: #2f6b4f;
@@ -153,7 +158,7 @@ function formatAppointmentTime(?string $time): string
             min-height: 100vh;
             background: var(--bg);
             color: var(--text);
-            font-family: "Segoe UI", Arial, sans-serif;
+            font-family: "DM Sans", sans-serif;
             overflow-x: hidden;
         }
 
@@ -186,10 +191,10 @@ function formatAppointmentTime(?string $time): string
             margin: 0;
             color: var(--green-dark);
             font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(40px, 4vw, 52px);
+            font-size: clamp(30px, 3vw, 38px);
             font-weight: 700;
             line-height: 1.05;
-            letter-spacing: -0.8px;
+            letter-spacing: -.7px;
         }
 
         .page-title-wrap p {
@@ -567,7 +572,7 @@ function formatAppointmentTime(?string $time): string
             }
 
             .page-title-wrap h1 {
-                font-size: 34px;
+                font-size: 30px;
             }
 
             .calendar-controls {

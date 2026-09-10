@@ -370,9 +370,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     continue;
                 }
 
-                if ($quantity > 6) {
+                if ($quantity > 5) {
                     throw new Exception(
-                        'Medicine quantity cannot exceed 6 for one item.'
+                        'Medicine quantity cannot exceed 5 for one item.'
                     );
                 }
 
@@ -639,8 +639,9 @@ $appointmentStmt = $pdo->prepare("
         c.full_name AS customer_name,
         c.email AS customer_email
     FROM appointments a
-    LEFT JOIN customers c
+    LEFT JOIN users c
         ON a.customer_id = c.id
+       AND c.role = 'customer'
     WHERE a.id = :id
     LIMIT 1
 ");
@@ -1686,30 +1687,6 @@ if (!empty($paymentItems)) {
                             </div>
                         <?php endif; ?>
 
-                        <?php if (!empty($paymentItems)): ?>
-
-                            <div class="existing-items">
-
-                                <?php foreach ($paymentItems as $item): ?>
-
-                                    <div class="existing-item">
-
-                                        <span>
-                                            <?= htmlspecialchars($item['item_name']) ?>
-                                            × <?= (int)$item['quantity'] ?>
-                                        </span>
-
-                                        <strong>
-                                            ₱<?= number_format((float)$item['subtotal'], 2) ?>
-                                        </strong>
-
-                                    </div>
-
-                                <?php endforeach; ?>
-
-                            </div>
-
-                        <?php endif; ?>
 
                         <div class="total-box">
 

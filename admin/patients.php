@@ -129,17 +129,18 @@ function patientDate($date) {
         }
 
         .patients-main {
-            margin-left: var(--sidebar-width, 270px);
-            width: calc(100% - var(--sidebar-width, 270px));
+            margin-left: 270px;
+            width: calc(100% - 270px);
             min-height: 100vh;
-            padding: 38px 38px 50px;
+            padding: 34px 38px 50px;
+            box-sizing: border-box;
             overflow-x: hidden;
         }
 
         .patients-container {
             width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
+            max-width: none;
+            margin: 0;
         }
 
         /* -------------------------------------------------
@@ -268,7 +269,7 @@ function patientDate($date) {
         .card-header {
             padding: 22px 24px;
             border-bottom: 1px solid var(--border);
-            background: linear-gradient(135deg, #fff, #fbfaf7);
+            background: var(--white);
         }
 
         .card-title-row {
@@ -528,7 +529,35 @@ function patientDate($date) {
                 width: 100%;
             }
         }
-    </style>
+    
+        /* =====================================================
+           DASHBOARD COLOR PALETTE
+           Keep this page visually consistent with admin/dashboard.php
+        ====================================================== */
+        :root {
+            --green: #2f6b4f;
+            --green-dark: #24543e;
+            --green-soft: #e8f2eb;
+            --gold: #c89b3c;
+            --cream: #f8f1e5;
+            --bg: #f5f6f2;
+            --text: #26352d;
+            --muted: #7b877f;
+            --border: #e4e8e3;
+            --white: #ffffff;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .admin-content,
+        .admin-main,
+        .patients-main {
+            color: var(--text);
+        }
+</style>
 </head>
 <body>
 

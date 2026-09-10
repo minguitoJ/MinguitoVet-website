@@ -28,11 +28,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 */
 
 $isAdminLoggedIn =
-    isset($_SESSION['admin_id']) &&
-    !empty($_SESSION['admin_id']);
+    isset($_SESSION['user_id']) &&
+    ($_SESSION['user_role'] ?? '') === 'admin';
 
 $adminUsername =
     $_SESSION['admin_username']
+    ?? $_SESSION['user_username']
+    ?? $_SESSION['user_email']
     ?? 'Administrator';
 
 
@@ -43,8 +45,8 @@ $adminUsername =
 */
 
 $isCustomerLoggedIn =
-    isset($_SESSION['customer_id']) &&
-    !empty($_SESSION['customer_id']);
+    isset($_SESSION['user_id']) &&
+    ($_SESSION['user_role'] ?? '') === 'customer';
 
 $customerName =
     $_SESSION['customer_name']

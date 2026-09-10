@@ -3,12 +3,24 @@ session_start();
 
 require_once __DIR__ . '/config/database.php';
 
-if (isset($_SESSION['admin_id'])) {
+/*
+ * ONE LOGIN SYSTEM
+ * Both Admin and Customer accounts now use the `users` table.
+ *
+ * users.role:
+ *   admin     -> admin/dashboard.php
+ *   customer  -> normal website
+ *
+ * Existing admin/customer session names are preserved so the
+ * current pages remain compatible.
+ */
+
+if (isset($_SESSION['admin_id']) && ($_SESSION['user_role'] ?? '') === 'admin') {
     header('Location: admin/dashboard.php');
     exit;
 }
 
-if (isset($_SESSION['customer_id'])) {
+if (isset($_SESSION['customer_id']) && ($_SESSION['user_role'] ?? '') === 'customer') {
     header('Location: index.php');
     exit;
 }
@@ -41,105 +53,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
 
-            /*
-             * ONE LOGIN:
-             * First check the admin account by username.
-             * If no valid admin is found, check the customer account by email.
-             */
-            $adminStmt = $pdo->prepare(
-                'SELECT id, username, password
-                 FROM admins
-                 WHERE username = :username
+            /* Search both username and email in the single users table. */
+            $userStmt = $pdo->prepare(
+                'SELECT
+                    id,
+                    full_name,
+                    username,
+                    email,
+                    contact_number,
+                    password,
+                    role
+                 FROM users
+                 WHERE username = :identifier
+                    OR email = :identifier
                  LIMIT 1'
             );
 
-            $adminStmt->execute([
-                ':username' => $identifier
+            $userStmt->execute([
+                ':identifier' => $identifier
             ]);
 
-            $admin = $adminStmt->fetch();
+            $account = $userStmt->fetch();
 
             if (
-                $admin &&
-                password_verify($password, $admin['password'])
+                $account &&
+                password_verify($password, $account['password'])
             ) {
 
                 session_regenerate_id(true);
 
+                /* Clear any previous account session. */
                 unset(
+                    $_SESSION['admin_id'],
+                    $_SESSION['admin_username'],
                     $_SESSION['customer_id'],
                     $_SESSION['customer_name'],
                     $_SESSION['customer_email'],
-                    $_SESSION['customer_contact']
+                    $_SESSION['customer_contact'],
+                    $_SESSION['user_id'],
+                    $_SESSION['user_role']
                 );
 
-                $_SESSION['admin_id'] =
-                    (int) $admin['id'];
+                $role = strtolower(trim((string) $account['role']));
 
-                $_SESSION['admin_username'] =
-                    $admin['username'];
+                /* ADMIN */
+                if ($role === 'admin') {
 
-                header(
-                    'Location: admin/dashboard.php'
-                );
+                    $_SESSION['user_id'] = (int) $account['id'];
+                    $_SESSION['user_role'] = 'admin';
 
-                exit;
+                    /* Keep existing admin session names for compatibility. */
+                    $_SESSION['admin_id'] = (int) $account['id'];
+                    $_SESSION['admin_username'] =
+                        $account['username'] ?: $account['email'];
+
+                    /* Admin always goes directly to the Dashboard. */
+                    header('Location: admin/dashboard.php');
+                    exit;
+                }
+
+                /* CUSTOMER */
+                if ($role === 'customer') {
+
+                    $_SESSION['user_id'] = (int) $account['id'];
+                    $_SESSION['user_role'] = 'customer';
+
+                    /* Keep existing customer session names for compatibility. */
+                    $_SESSION['customer_id'] = (int) $account['id'];
+                    $_SESSION['customer_name'] = $account['full_name'];
+                    $_SESSION['customer_email'] = $account['email'];
+                    $_SESSION['customer_contact'] =
+                        $account['contact_number'] ?? '';
+
+                    header('Location: ' . $redirect);
+                    exit;
+                }
             }
 
-            /*
-             * Customer login uses email.
-             */
-            $customerStmt = $pdo->prepare(
-                'SELECT id, full_name, email, contact_number, password
-                 FROM customers
-                 WHERE email = :email
-                 LIMIT 1'
-            );
-
-            $customerStmt->execute([
-                ':email' => $identifier
-            ]);
-
-            $customer = $customerStmt->fetch();
-
-            if (
-                $customer &&
-                password_verify(
-                    $password,
-                    $customer['password']
-                )
-            ) {
-
-                session_regenerate_id(true);
-
-                unset(
-                    $_SESSION['admin_id'],
-                    $_SESSION['admin_username']
-                );
-
-                $_SESSION['customer_id'] =
-                    (int) $customer['id'];
-
-                $_SESSION['customer_name'] =
-                    $customer['full_name'];
-
-                $_SESSION['customer_email'] =
-                    $customer['email'];
-
-                $_SESSION['customer_contact'] =
-                    $customer['contact_number'] ?? '';
-
-                header(
-                    'Location: ' . $redirect
-                );
-
-                exit;
-            }
-
-            /*
-             * Use one generic error so the login page
-             * does not reveal whether an account exists.
-             */
+            /* Generic error for invalid credentials or unsupported role. */
             $error = 'Invalid username/email or password.';
 
         } catch (PDOException $e) {

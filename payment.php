@@ -1,14 +1,17 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['customer_id'])) {
+if (
+    !isset($_SESSION['user_id']) ||
+    ($_SESSION['user_role'] ?? '') !== 'customer'
+) {
     header('Location: login.php?redirect=payment.php');
     exit;
 }
 
 require_once __DIR__ . '/config/database.php';
 
-$customerId = (int)$_SESSION['customer_id'];
+$customerId = (int)$_SESSION['user_id'];
 $appointmentId = (int)($_GET['appointment_id'] ?? $_POST['appointment_id'] ?? 0);
 
 if ($appointmentId <= 0) {
@@ -1155,15 +1158,29 @@ $pageTitle = 'Payment';
                 </div>
 
                 <div class="card-body">
-
-                    <?php if (
+                    <?php
+                    /*
+                     * An admin-prepared bill is NOT a customer submission.
+                     *
+                     * Prepared bill: Pending + Cash + NULL reference.
+                     * Submitted bill: GCash + real reference, or Cash + CASH_SUBMITTED.
+                     */
+                    $customerSubmitted =
                         $payment &&
                         $payment['payment_status'] === 'Pending' &&
                         (
-                            !empty(trim($payment['payment_method'] ?? '')) ||
-                            !empty(trim($payment['reference_number'] ?? ''))
-                        )
-                    ): ?>
+                            (
+                                ($payment['payment_method'] ?? '') === 'GCash' &&
+                                !empty(trim($payment['reference_number'] ?? ''))
+                            ) ||
+                            (
+                                ($payment['payment_method'] ?? '') === 'Cash' &&
+                                ($payment['reference_number'] ?? '') === 'CASH_SUBMITTED'
+                            )
+                        );
+                    ?>
+
+                    <?php if ($customerSubmitted): ?>
 
                         <div class="pending-box">
                             <strong>⏳ Pending Verification</strong>
@@ -1229,11 +1246,13 @@ $pageTitle = 'Payment';
                      *   (identified by no GCash reference)
                      */
                     $canSubmit =
-                        !$payment ||
-                        $payment['payment_status'] === 'Cancelled' ||
+                        $payment &&
                         (
-                            $payment['payment_status'] === 'Pending' &&
-                            empty($payment['reference_number'])
+                            $payment['payment_status'] === 'Cancelled' ||
+                            (
+                                $payment['payment_status'] === 'Pending' &&
+                                !$customerSubmitted
+                            )
                         );
                     ?>
 

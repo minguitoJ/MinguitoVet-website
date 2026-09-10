@@ -6,7 +6,7 @@ session_start();
    CUSTOMER LOGIN REQUIRED
 ========================================================= */
 
-if (!isset($_SESSION['customer_id'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'customer') {
     header("Location: ../login.php?redirect=appointment.php");
     exit;
 }
@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
    GET LOGGED-IN CUSTOMER
 ========================================================= */
 
-$customerId = (int) $_SESSION['customer_id'];
+$customerId = (int) $_SESSION['user_id'];
 
 
 /* =========================================================
@@ -188,7 +188,9 @@ $dateHasErrors = is_array($dateErrors)
         $dateErrors['error_count'] > 0
     );
 
-$today = new DateTime('today');
+$manilaTimezone = new DateTimeZone('Asia/Manila');
+$today = new DateTime('today', $manilaTimezone);
+$now = new DateTime('now', $manilaTimezone);
 
 if (
     !$dateObject ||
@@ -246,6 +248,19 @@ if (
 
 
 /* =========================================================
+   PREVENT PAST TIME BOOKINGS
+========================================================= */
+
+if (
+    $appointmentDate === $now->format('Y-m-d') &&
+    $appointmentTime <= $now->format('H:i')
+) {
+    header("Location: ../appointment.php?error=past_time");
+    exit;
+}
+
+
+/* =========================================================
    SAVE APPOINTMENT
 ========================================================= */
 
@@ -257,8 +272,9 @@ try {
 
     $customerStmt = $pdo->prepare(
         "SELECT id
-         FROM customers
+         FROM users
          WHERE id = :customer_id
+           AND role = 'customer'
          LIMIT 1"
     );
 

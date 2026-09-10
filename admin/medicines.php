@@ -386,15 +386,17 @@ function medicine_json($value): string
 
     <style>
         :root {
-            --green: #073b2a;
-            --green-light: #174c3b;
-            --cream: #f8efe2;
-            --gold: #b57a2f;
+            --green: #2f6b4f;
+            --green-dark: #24543e;
+            --green-soft: #e8f2eb;
+            --cream: #f8f1e5;
+            --gold: #c89b3c;
             --gold-light: #d4a15c;
             --white: #ffffff;
-            --text: #17231e;
-            --muted: #66756e;
-            --border: #e6d7c2;
+            --text: #26352d;
+            --muted: #7b877f;
+            --border: #e4e8e3;
+            --bg: #f5f6f2;
             --success: #14633f;
             --warning: #a66a16;
             --danger: #a13d32;
@@ -408,7 +410,7 @@ function medicine_json($value): string
             min-height: 100vh;
             font-family: "DM Sans", Arial, sans-serif;
             color: var(--text);
-            background: linear-gradient(135deg, #fbf4e9, #f4e6d2);
+            background: var(--bg);
         }
 
         /* ===============================
@@ -573,7 +575,7 @@ function medicine_json($value): string
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 19px;
-            box-shadow: 0 10px 28px rgba(7,59,42,.07);
+            box-shadow: 0 10px 28px rgba(40, 65, 50, .045);
         }
 
         .stat-label {
@@ -596,7 +598,7 @@ function medicine_json($value): string
             border: 1px solid var(--border);
             border-radius: 18px;
             padding: 20px;
-            box-shadow: 0 10px 28px rgba(7,59,42,.07);
+            box-shadow: 0 10px 28px rgba(40, 65, 50, .045);
             margin-bottom: 22px;
         }
 
@@ -662,7 +664,7 @@ function medicine_json($value): string
             border: 1px solid var(--border);
             border-radius: 18px;
             overflow: hidden;
-            box-shadow: 0 10px 28px rgba(7,59,42,.07);
+            box-shadow: 0 10px 28px rgba(40, 65, 50, .045);
         }
 
         .table-header {
@@ -716,7 +718,7 @@ function medicine_json($value): string
         }
 
         .status::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
-        .status-active { background:#e5f2e8; color:#2b7748; }
+        .status-active { background:#e5f2e8; color:var(--green); }
         .status-inactive { background:#eeeae5; color:#77736d; }
 
         .stock { font-weight:800; white-space:nowrap; }
@@ -737,14 +739,14 @@ function medicine_json($value): string
             cursor:pointer;
         }
         .edit-btn { background:#f2e7cf; color:#806025; }
-        .restock-btn { background:#e5f2e8; color:#2b7748; }
+        .restock-btn { background:#e5f2e8; color:var(--green); }
         .restock-select {
             height:34px;
             padding:0 8px;
             border:1px solid #cfe1d4;
             border-radius:8px;
             background:#f7fbf8;
-            color:#2b7748;
+            color:var(--green);
             font-family:inherit;
             font-size:10px;
             font-weight:800;
@@ -752,7 +754,7 @@ function medicine_json($value): string
             outline:none;
         }
         .restock-select:focus {
-            border-color:#2b7748;
+            border-color:var(--green);
             box-shadow:0 0 0 2px rgba(43,119,72,.10);
         }
         .delete-btn { background:#f8e3e0; color:var(--danger); }
@@ -846,32 +848,79 @@ function medicine_json($value): string
             .filter-form { grid-template-columns:1fr; }
             .form-row { grid-template-columns:1fr; }
         }
-    </style>
+    
+        /* =====================================================
+           DASHBOARD COLOR PALETTE
+           Keep this page visually consistent with admin/dashboard.php
+        ====================================================== */
+        :root {
+            --green: #2f6b4f;
+            --green-dark: #24543e;
+            --green-soft: #e8f2eb;
+            --gold: #c89b3c;
+            --cream: #f8f1e5;
+            --bg: #f5f6f2;
+            --text: #26352d;
+            --muted: #7b877f;
+            --border: #e4e8e3;
+            --white: #ffffff;
+        }
 
+        body {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .admin-content,
+        .admin-main,
+        .patients-main {
+            color: var(--text);
+        }
+</style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/sidebar.css">
+
+    <style>
+        /* Shared admin dashboard layout */
+        .admin-content {
+            margin-left: 270px;
+            width: calc(100% - 270px);
+            min-height: 100vh;
+            padding: 34px 38px 50px;
+            box-sizing: border-box;
+        }
+        .admin-content > .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .admin-content .container {
+            width: 100%;
+            max-width: none;
+        }
+
+        @media (max-width: 980px) {
+            .admin-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 82px 20px 40px;
+            }
+        }
+        @media (max-width: 600px) {
+            .admin-content {
+                padding: 78px 15px 35px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<header class="admin-header">
-    <div class="header-inner">
-        <div class="brand">
-            <div class="brand-icon">
-                <img src="../assets/images/logo2.png" alt="Minguito Veterinary Clinic Logo">
-            </div>
-            <div class="brand-text">
-                <strong>Minguito Veterinary</strong>
-                <span>Administration Panel</span>
-            </div>
-        </div>
+<?php include 'sidebar.php'; ?>
 
-        <div class="header-links">
-            <a href="dashboard.php" class="header-link">Dashboard</a>
-            <a href="../logout.php" class="header-link logout">Logout</a>
-        </div>
-    </div>
-</header>
 
-<main class="main">
+<main class="main admin-content">
     <div class="container">
         <section class="page-title">
             <div>

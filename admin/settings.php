@@ -6,18 +6,22 @@ require_once '../includes/functions.php';
 
 requireLogin();
 
-$adminId = (int)($_SESSION['admin_id'] ?? 0);
+$adminId = (int)($_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0);
+$adminRole = $_SESSION['user_role'] ?? '';
 
-if ($adminId <= 0) {
+if ($adminId <= 0 || ($adminRole !== '' && $adminRole !== 'admin')) {
     header('Location: ../login.php?type=admin');
     exit;
 }
 
-$message = '';
-$messageType = '';
-
-// Get current admin
-$stmt = $pdo->prepare("SELECT id, username, created_at FROM admins WHERE id = :id LIMIT 1");
+// Get current admin from the unified users table.
+$stmt = $pdo->prepare("
+    SELECT id, full_name, username, email, contact_number, password, role, created_at
+    FROM users
+    WHERE id = :id
+      AND role = 'admin'
+    LIMIT 1
+");
 $stmt->execute([':id' => $adminId]);
 $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -27,6 +31,9 @@ if (!$admin) {
     header('Location: ../login.php?type=admin');
     exit;
 }
+
+$message = '';
+$messageType = '';
 
 // ---------------------------------------------------------
 // UPDATE USERNAME
@@ -49,9 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
             // Check if another admin already uses this username
             $check = $pdo->prepare("
                 SELECT id
-                FROM admins
+                FROM users
                 WHERE username = :username
                   AND id != :id
+                  AND role = 'admin'
                 LIMIT 1
             ");
             $check->execute([
@@ -64,9 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 $messageType = 'error';
             } else {
                 $stmt = $pdo->prepare("
-                    UPDATE admins
+                    UPDATE users
                     SET username = :username
                     WHERE id = :id
+                      AND role = 'admin'
                 ");
 
                 $stmt->execute([
@@ -75,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 ]);
 
                 $_SESSION['admin_username'] = $username;
+                $_SESSION['user_id'] = $adminId;
+                $_SESSION['user_role'] = 'admin';
                 $admin['username'] = $username;
 
                 $message = 'Username updated successfully.';
@@ -99,37 +110,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
     if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
         $message = 'Please complete all password fields.';
         $messageType = 'error';
-    } elseif (!password_verify($currentPassword, $admin['password'] ?? '')) {
-        // Password is not selected above for security, so fetch it only when needed.
-        $passwordStmt = $pdo->prepare("SELECT password FROM admins WHERE id = :id LIMIT 1");
-        $passwordStmt->execute([':id' => $adminId]);
-        $passwordRow = $passwordStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$passwordRow || !password_verify($currentPassword, $passwordRow['password'])) {
-            $message = 'Your current password is incorrect.';
-            $messageType = 'error';
-        }
-    }
-
-    // If the current password was not already rejected, verify it properly.
-    if ($message === '') {
-        $passwordStmt = $pdo->prepare("SELECT password FROM admins WHERE id = :id LIMIT 1");
-        $passwordStmt->execute([':id' => $adminId]);
-        $passwordRow = $passwordStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$passwordRow || !password_verify($currentPassword, $passwordRow['password'])) {
-            $message = 'Your current password is incorrect.';
-            $messageType = 'error';
-        }
-    }
-
-    if ($message === '' && strlen($newPassword) < 6) {
+    } elseif (!password_verify($currentPassword, $admin['password'])) {
+        $message = 'Your current password is incorrect.';
+        $messageType = 'error';
+    } elseif (strlen($newPassword) < 6) {
         $message = 'New password must be at least 6 characters.';
         $messageType = 'error';
-    }
-
-    if ($message === '' && $newPassword !== $confirmPassword) {
+    } elseif ($newPassword !== $confirmPassword) {
         $message = 'New password and confirmation password do not match.';
+        $messageType = 'error';
+    } elseif (password_verify($newPassword, $admin['password'])) {
+        $message = 'New password must be different from your current password.';
         $messageType = 'error';
     }
 
@@ -138,15 +129,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
             $stmt = $pdo->prepare("
-                UPDATE admins
+                UPDATE users
                 SET password = :password
                 WHERE id = :id
+                  AND role = 'admin'
             ");
 
             $stmt->execute([
                 ':password' => $hashedPassword,
                 ':id' => $adminId
             ]);
+
+            // Keep the current admin session valid after changing the password.
+            $_SESSION['user_id'] = $adminId;
+            $_SESSION['user_role'] = 'admin';
+
+            $admin['password'] = $hashedPassword;
 
             $message = 'Password changed successfully.';
             $messageType = 'success';
@@ -161,13 +159,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
 // RELOAD ADMIN DATA
 // ---------------------------------------------------------
 $stmt = $pdo->prepare("
-    SELECT id, username, created_at
-    FROM admins
+    SELECT id, full_name, username, email, contact_number, password, role, created_at
+    FROM users
     WHERE id = :id
+      AND role = 'admin'
     LIMIT 1
 ");
 $stmt->execute([':id' => $adminId]);
 $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$admin) {
+    session_unset();
+    session_destroy();
+    header('Location: ../login.php?type=admin');
+    exit;
+}
 
 $adminUsername = $admin['username'] ?? 'Administrator';
 $createdDate = !empty($admin['created_at'])
@@ -194,8 +200,8 @@ $createdDate = !empty($admin['created_at'])
 
         body {
             font-family: 'DM Sans', sans-serif;
-            background: #f6f1e8;
-            color: #263b32;
+            background: #f5f6f2;
+            color: #26352d;
             min-height: 100vh;
         }
 
@@ -210,7 +216,7 @@ $createdDate = !empty($admin['created_at'])
         }
 
         .eyebrow {
-            color: #a47b35;
+            color: #c89b3c;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1.8px;
@@ -220,12 +226,12 @@ $createdDate = !empty($admin['created_at'])
 
         .page-heading h2 {
             font-family: 'Playfair Display', serif;
-            color: #173d32;
+            color: #24543e;
             font-size: 34px;
         }
 
         .page-heading p {
-            color: #6c756f;
+            color: #7b877f;
             margin-top: 6px;
             font-size: 14px;
         }
@@ -251,7 +257,7 @@ $createdDate = !empty($admin['created_at'])
         }
 
         .profile-card {
-            background: #173d32;
+            background: #24543e;
             color: #fff;
             border-radius: 16px;
             padding: 25px;
@@ -266,8 +272,8 @@ $createdDate = !empty($admin['created_at'])
             width: 64px;
             height: 64px;
             border-radius: 50%;
-            background: #d5aa5c;
-            color: #173d32;
+            background: #c89b3c;
+            color: #24543e;
             display: grid;
             place-items: center;
             font-size: 27px;
@@ -289,7 +295,7 @@ $createdDate = !empty($admin['created_at'])
         .profile-date {
             margin-left: auto;
             text-align: right;
-            color: #e9dfcf;
+            color: #e4e8e3;
             font-size: 12px;
         }
 
@@ -301,7 +307,7 @@ $createdDate = !empty($admin['created_at'])
 
         .settings-card {
             background: #fff;
-            border: 1px solid #e9dfcf;
+            border: 1px solid #e4e8e3;
             border-radius: 15px;
             padding: 24px;
             box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
@@ -315,7 +321,7 @@ $createdDate = !empty($admin['created_at'])
             width: 42px;
             height: 42px;
             border-radius: 10px;
-            background: #f1e8d9;
+            background: #f8f1e5;
             display: grid;
             place-items: center;
             font-size: 19px;
@@ -323,13 +329,13 @@ $createdDate = !empty($admin['created_at'])
         }
 
         .settings-card h3 {
-            color: #173d32;
+            color: #24543e;
             font-size: 18px;
             margin-bottom: 5px;
         }
 
         .settings-card .description {
-            color: #777f79;
+            color: #7b877ff79;
             font-size: 13px;
             line-height: 1.5;
             margin-bottom: 20px;
@@ -354,16 +360,16 @@ $createdDate = !empty($admin['created_at'])
         .form-group input {
             width: 100%;
             border: 1px solid #dcd2c2;
-            background: #fcfaf6;
+            background: #fcfdfb;
             border-radius: 8px;
             padding: 11px 12px;
             font-family: inherit;
-            color: #263b32;
+            color: #26352d;
             outline: none;
         }
 
         .form-group input:focus {
-            border-color: #a47b35;
+            border-color: #c89b3c;
         }
 
         .toggle-password {
@@ -374,14 +380,14 @@ $createdDate = !empty($admin['created_at'])
             border: 0;
             background: transparent;
             cursor: pointer;
-            color: #777;
+            color: #7b877f;
             font-size: 12px;
             font-weight: 700;
         }
 
         .save-btn {
             border: 0;
-            background: #173d32;
+            background: #24543e;
             color: #fff;
             padding: 11px 17px;
             border-radius: 8px;
@@ -398,14 +404,14 @@ $createdDate = !empty($admin['created_at'])
         }
 
         .info-item {
-            background: #f8f4ec;
+            background: #f8f1e5;
             border-radius: 10px;
             padding: 14px;
         }
 
         .info-item span {
             display: block;
-            color: #8a8e89;
+            color: #7b877f;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: .6px;
@@ -414,14 +420,14 @@ $createdDate = !empty($admin['created_at'])
         }
 
         .info-item strong {
-            color: #173d32;
+            color: #24543e;
             font-size: 14px;
             word-break: break-word;
         }
 
         .note {
             margin-top: 15px;
-            color: #858a85;
+            color: #7b877f;
             font-size: 12px;
             line-height: 1.5;
         }
@@ -463,7 +469,7 @@ $createdDate = !empty($admin['created_at'])
             margin-left: 270px;
             width: calc(100% - 270px);
             min-height: 100vh;
-            padding: 34px 38px 50px;
+            padding: 30px 34px 45px;
             box-sizing: border-box;
         }
 

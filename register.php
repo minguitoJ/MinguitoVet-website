@@ -10,9 +10,16 @@ if (empty($_SESSION['register_csrf_token'])) {
 
 require_once __DIR__ . '/config/database.php';
 
-if (isset($_SESSION['customer_id'])) {
-    header('Location: index.php');
-    exit;
+if (isset($_SESSION['user_id'])) {
+    if (($_SESSION['user_role'] ?? '') === 'admin') {
+        header('Location: admin/dashboard.php');
+        exit;
+    }
+
+    if (($_SESSION['user_role'] ?? '') === 'customer') {
+        header('Location: index.php');
+        exit;
+    }
 }
 
 $error = '';
@@ -33,6 +40,9 @@ if (!in_array($redirect, $allowedRedirects, true)) {
 
 $fullName =
     trim($_POST['full_name'] ?? '');
+
+$username =
+    trim($_POST['username'] ?? '');
 
 $email =
     trim($_POST['email'] ?? '');
@@ -62,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif (
         $fullName === '' ||
+        $username === '' ||
         $email === '' ||
         $contact === '' ||
         $password === '' ||
@@ -70,6 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $error =
             'Please fill in all required fields.';
+
+    } elseif (
+        strlen($username) < 3 ||
+        strlen($username) > 50 ||
+        !preg_match('/^[A-Za-z0-9_.-]+$/', $username)
+    ) {
+
+        $error =
+            'Username must be 3 to 50 characters and may contain letters, numbers, dot, underscore, or hyphen.';
 
     } elseif (
         !filter_var(
@@ -121,21 +141,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
 
+            /*
+             * ONE ACCOUNT TABLE
+             * All registered customer accounts are stored in `users`.
+             * Public registration always creates role = customer.
+             */
+
             $check = $pdo->prepare(
-                'SELECT id
-                 FROM customers
-                 WHERE email = :email
+                'SELECT id, username, email
+                 FROM users
+                 WHERE username = :username
+                    OR email = :email
                  LIMIT 1'
             );
 
             $check->execute([
+                ':username' => $username,
                 ':email' => $email
             ]);
 
-            if ($check->fetch()) {
+            $existing = $check->fetch();
 
-                $error =
-                    'This email address is already registered.';
+            if ($existing) {
+
+                if (
+                    isset($existing['username']) &&
+                    strcasecmp($existing['username'], $username) === 0
+                ) {
+                    $error = 'This username is already registered.';
+                } else {
+                    $error = 'This email address is already registered.';
+                }
 
             } else {
 
@@ -146,19 +182,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                 $stmt = $pdo->prepare(
-                    'INSERT INTO customers
+                    'INSERT INTO users
                         (
                             full_name,
+                            username,
                             email,
                             contact_number,
-                            password
+                            password,
+                            role
                         )
                      VALUES
                         (
                             :full_name,
+                            :username,
                             :email,
                             :contact_number,
-                            :password
+                            :password,
+                            :role
                         )'
                 );
 
@@ -167,6 +207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':full_name' =>
                         $fullName,
 
+                    ':username' =>
+                        $username,
+
                     ':email' =>
                         $email,
 
@@ -174,29 +217,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $contact,
 
                     ':password' =>
-                        $hashedPassword
+                        $hashedPassword,
 
+                    ':role' =>
+                        'customer'
                 ]);
 
-                $customerId =
-                    (int) $pdo->lastInsertId();
-
-                session_regenerate_id(true);
-
-                $_SESSION['customer_id'] =
-                    $customerId;
-
-                $_SESSION['customer_name'] =
-                    $fullName;
-
-                $_SESSION['customer_email'] =
-                    $email;
-
-                $_SESSION['customer_contact'] =
-                    $contact;
+                /*
+                 * IMPORTANT:
+                 * Do NOT log the new customer in automatically.
+                 *
+                 * After successful registration, send the customer
+                 * back to login.php so they must enter their credentials.
+                 */
+                unset(
+                    $_SESSION['customer_id'],
+                    $_SESSION['customer_name'],
+                    $_SESSION['customer_email'],
+                    $_SESSION['customer_contact'],
+                    $_SESSION['user_id'],
+                    $_SESSION['user_role']
+                );
 
                 header(
-                    'Location: ' . $redirect
+                    'Location: login.php?registered=1'
+                    . ($redirect !== 'index.php'
+                        ? '&redirect=' . urlencode($redirect)
+                        : '')
                 );
 
                 exit;
@@ -733,6 +780,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 autocomplete="name"
                 minlength="2"
                 maxlength="100"
+                required
+            >
+
+        </div>
+
+        <div class="group">
+
+            <label for="username">
+                Username
+            </label>
+
+            <input
+                id="username"
+                type="text"
+                name="username"
+                value="<?= htmlspecialchars(
+                    $username,
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>"
+                placeholder="Choose a username"
+                autocomplete="username"
+                minlength="3"
+                maxlength="50"
+                pattern="[A-Za-z0-9_.-]+"
+                title="Use 3 to 50 characters: letters, numbers, dot, underscore, or hyphen."
                 required
             >
 

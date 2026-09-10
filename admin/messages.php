@@ -109,13 +109,13 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         body {
             font-family: 'DM Sans', sans-serif;
-            background: #f6f1e8;
-            color: #263b32;
+            background: #f5f6f2;
+            color: #26352d;
             min-height: 100vh;
         }
 
         .admin-header {
-            background: #173d32;
+            background: #24543e;
             color: #fff;
             padding: 18px 5%;
             display: flex;
@@ -138,8 +138,8 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
             width: 43px;
             height: 43px;
             border-radius: 50%;
-            background: #d5aa5c;
-            color: #173d32;
+            background: #c89b3c;
+            color: #24543e;
             display: grid;
             place-items: center;
             font-size: 21px;
@@ -172,8 +172,8 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         .logout-btn {
             text-decoration: none;
-            color: #173d32;
-            background: #d5aa5c;
+            color: #24543e;
+            background: #c89b3c;
             padding: 9px 15px;
             border-radius: 8px;
             font-size: 13px;
@@ -190,7 +190,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .eyebrow {
-            color: #a47b35;
+            color: #c89b3c;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1.8px;
@@ -200,12 +200,12 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         .page-heading h2 {
             font-family: 'Playfair Display', serif;
-            color: #173d32;
+            color: #24543e;
             font-size: 34px;
         }
 
         .page-heading p {
-            color: #6c756f;
+            color: #7b877f;
             margin-top: 6px;
             font-size: 14px;
         }
@@ -219,14 +219,14 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         .stat-card {
             background: #fff;
-            border: 1px solid #e9dfcf;
+            border: 1px solid #e4e8e3;
             border-radius: 14px;
             padding: 19px 21px;
             box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
         }
 
         .stat-label {
-            color: #7b817c;
+            color: #7b877f;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: .8px;
@@ -236,7 +236,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         .stat-number {
             font-size: 28px;
             font-weight: 700;
-            color: #173d32;
+            color: #24543e;
             margin-top: 5px;
         }
 
@@ -262,7 +262,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         .filters {
             background: #fff;
-            border: 1px solid #e9dfcf;
+            border: 1px solid #e4e8e3;
             border-radius: 14px;
             padding: 16px;
             display: flex;
@@ -275,8 +275,8 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
             flex: 1;
             min-width: 200px;
             border: 1px solid #dcd2c2;
-            background: #fcfaf6;
-            color: #263b32;
+            background: #fcfdfb;
+            color: #26352d;
             padding: 11px 12px;
             border-radius: 8px;
             font-family: inherit;
@@ -284,7 +284,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .filters input:focus {
-            border-color: #a47b35;
+            border-color: #c89b3c;
         }
 
         .filter-btn,
@@ -300,18 +300,18 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .filter-btn {
-            background: #173d32;
+            background: #24543e;
             color: #fff;
         }
 
         .clear-btn {
-            background: #eee7dc;
-            color: #46544d;
+            background: #f8f1e5;
+            color: #496055;
         }
 
         .table-card {
             background: #fff;
-            border: 1px solid #e9dfcf;
+            border: 1px solid #e4e8e3;
             border-radius: 14px;
             overflow: hidden;
             box-shadow: 0 5px 18px rgba(70, 53, 30, .05);
@@ -328,7 +328,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         th {
-            background: #f1e8d9;
+            background: #f8f1e5;
             color: #496055;
             font-size: 11px;
             text-transform: uppercase;
@@ -340,41 +340,41 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         td {
             padding: 15px 16px;
-            border-top: 1px solid #eee8de;
+            border-top: 1px solid #eef0ed;
             vertical-align: middle;
             font-size: 14px;
         }
 
         tr:hover td {
-            background: #fcfaf6;
+            background: #fcfdfb;
         }
 
         .sender-name {
             font-weight: 700;
-            color: #173d32;
+            color: #24543e;
         }
 
         .sender-email {
             display: block;
-            color: #7b817c;
+            color: #7b877f;
             font-size: 12px;
             margin-top: 3px;
         }
 
         .subject {
             font-weight: 700;
-            color: #364c42;
+            color: #26352d;
             max-width: 230px;
         }
 
         .preview {
             max-width: 350px;
-            color: #737b76;
+            color: #7b877f;
             line-height: 1.45;
         }
 
         .date {
-            color: #65716b;
+            color: #7b877f;
             white-space: nowrap;
             font-size: 13px;
         }
@@ -408,7 +408,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         .empty {
             padding: 55px 20px;
             text-align: center;
-            color: #7b817c;
+            color: #7b877f;
         }
 
         .empty-icon {
@@ -452,15 +452,15 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
 
         .modal-box h3 {
             font-family: 'Playfair Display', serif;
-            color: #173d32;
+            color: #24543e;
             font-size: 25px;
             line-height: 1.2;
         }
 
         .close-btn {
             border: 0;
-            background: #eee7dc;
-            color: #46544d;
+            background: #f8f1e5;
+            color: #496055;
             width: 34px;
             height: 34px;
             border-radius: 50%;
@@ -470,7 +470,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         }
 
         .message-meta {
-            background: #f8f4ec;
+            background: #f8f1e5;
             border-radius: 11px;
             padding: 15px;
             margin-bottom: 18px;
@@ -490,20 +490,20 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
         .meta-label {
             width: 75px;
             flex-shrink: 0;
-            color: #8a8e89;
+            color: #7b877f;
             font-weight: 700;
         }
 
         .meta-value {
-            color: #364c42;
+            color: #26352d;
             word-break: break-word;
         }
 
         .full-message {
-            border: 1px solid #e5ddd0;
+            border: 1px solid #e4e8e3;
             border-radius: 11px;
             padding: 18px;
-            color: #4d5852;
+            color: #26352d;
             line-height: 1.7;
             white-space: pre-wrap;
             word-break: break-word;
@@ -579,7 +579,7 @@ $adminUsername = $_SESSION['admin_username'] ?? 'Administrator';
             margin-right: 0 !important;
             margin-top: 0 !important;
             margin-bottom: 0 !important;
-            padding: 38px 38px 60px !important;
+            padding: 30px 34px 45px !important;
             min-height: 100vh;
             box-sizing: border-box;
         }
